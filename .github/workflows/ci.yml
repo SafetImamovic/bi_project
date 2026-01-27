@@ -1,0 +1,34 @@
+name: BI Pipeline CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  validate-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Docker Compose
+        run: |
+          docker compose config -q
+          
+      - name: Lint SQL Files
+        # Using a simple check for now, can be upgraded to sqlfluff
+        run: |
+          if [ -f "local-files/init.sql" ]; then
+            echo "SQL file exists. Syntax verification pending runner."
+          else
+            echo "::error::init.sql missing!"
+            exit 1
+          fi
+
+  integration-test-placeholder:
+    runs-on: ubuntu-latest
+    needs: validate-config
+    steps:
+      - name: Dummy Test
+        run: echo "Integration tests (n8n -> Postgres) would run here."
