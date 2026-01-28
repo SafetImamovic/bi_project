@@ -1,0 +1,32 @@
+{
+    "mcpServers": {
+        "n8n-mcp": {
+            "command": "cmd",
+            "args": [
+                "/c npx n8n-mcp"
+            ],
+            "env": {
+                "MCP_MODE": "stdio",
+                "LOG_LEVEL": "error",
+                "DISABLE_CONSOLE_OUTPUT": "true",
+                "N8N_API_URL": "http://127.0.0.1:5678/",
+                "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNTc5Y2ZkMC1mNGZhLTRhNWEtYjYyMS0zNzY1OTM1ODQyMTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY5NTIzNzUwfQ.YW6T2Srh2EzT82z41l1ATj41ak-LRaiz9Qc6aC3LNSE"
+            }
+        },
+        "postgres": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "DATABASE_URI",
+                "crystaldba/postgres-mcp",
+                "--access-mode=unrestricted"
+            ],
+            "env": {
+                "DATABASE_URI": "postgresql://postgres:bi_projekat@localhost:5432/medical_dwh"
+            }
+        }
+    }
+}

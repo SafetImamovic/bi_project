@@ -6,27 +6,35 @@ services:
       - "5678:5678"
     volumes:
       - ./n8n/workflows:/home/node/workflows
+      - ./data:/home/node/data
+      - ./local-files:/home/node/local-files
       - n8n_data:/home/node/.n8n
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=username
       - N8N_BASIC_AUTH_PASSWORD=password
+      - DB_POSTGRESDB_HOST=db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=postgres
+      - DB_POSTGRESDB_USER=postgres
+      - DB_POSTGRESDB_PASSWORD=bi_projekat
+    networks:
+      - bi_projekat
+    depends_on:
+      - db
 
   db:
     image: postgres
+    ports:
+      - "5432:5432"
     restart: always
-    # set shared memory limit when using docker compose
     shm_size: 128mb
-    # or set shared memory limit when deploy via swarm stack
-    #volumes:
-    #  - type: tmpfs
-    #    target: /dev/shm
-    #    tmpfs:
-    #      size: 134217728 # 128*2^20 bytes = 128Mb
     environment:
       POSTGRES_PASSWORD: bi_projekat
     volumes:
       - db_data:/var/lib/postgresql
+      - ./data:/data
+      - ./local-files:/docker-entrypoint-initdb.d
     networks:
       - bi_projekat
 
