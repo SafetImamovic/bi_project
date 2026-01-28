@@ -5,7 +5,13 @@
       "Bash(dir:*)",
       "Bash(ls -la \"C:\\\\Users\\\\User\\\\Development\\\\bi_project\\\\powerbi-mcp-server\\\\extension\\\\server\"\" 2>/dev/null || echo \"Directory not found \")",
       "Bash(test:*)",
-      "Bash(claude --debug:*)"
+      "Bash(claude --debug:*)",
+      "mcp__powerbi-modeling-mcp__connection_operations",
+      "mcp__powerbi-modeling-mcp__table_operations",
+      "mcp__powerbi-modeling-mcp__measure_operations",
+      "mcp__powerbi-modeling-mcp__batch_measure_operations",
+      "mcp__powerbi-modeling-mcp__dax_query_operations",
+      "mcp__postgres__execute_sql"
     ]
   },
   "enableAllProjectMcpServers": true,
