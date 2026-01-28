@@ -1,0 +1,594 @@
+{
+  "name": "ETL Medical Appointments",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1328,
+        240
+      ],
+      "id": "4839d397-926e-41c4-a48a-5003045e4b89",
+      "name": "Start ETL"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- STAGING: Create tables\n-- =============================================\nDROP TABLE IF EXISTS stg_appointments CASCADE;\nDROP TABLE IF EXISTS stg_patients CASCADE;\nDROP TABLE IF EXISTS stg_slots CASCADE;\n\nCREATE TABLE stg_patients (\n    patient_id      VARCHAR(10),\n    name            VARCHAR(60),\n    sex             VARCHAR(15),\n    dob             VARCHAR(20),\n    insurance       VARCHAR(50),\n    load_ts         TIMESTAMP DEFAULT NOW()\n);\n\nCREATE TABLE stg_slots (\n    slot_id           VARCHAR(10),\n    appointment_date  VARCHAR(20),\n    appointment_time  VARCHAR(20),\n    is_available      VARCHAR(10),\n    load_ts           TIMESTAMP DEFAULT NOW()\n);\n\nCREATE TABLE stg_appointments (\n    appointment_id        VARCHAR(10),\n    slot_id               VARCHAR(10),\n    scheduling_date       VARCHAR(20),\n    appointment_date      VARCHAR(20),\n    appointment_time      VARCHAR(20),\n    scheduling_interval   VARCHAR(10),\n    status                VARCHAR(20),\n    check_in_time         VARCHAR(20),\n    appointment_duration  VARCHAR(20),\n    start_time            VARCHAR(20),\n    end_time              VARCHAR(20),\n    waiting_time          VARCHAR(20),\n    patient_id            VARCHAR(10),\n    sex                   VARCHAR(15),\n    age                   VARCHAR(10),\n    age_group             VARCHAR(10),\n    load_ts               TIMESTAMP DEFAULT NOW()\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1104,
+        240
+      ],
+      "id": "bbaabf3d-2c3d-4103-a787-9ac8fec1e9da",
+      "name": "1. Create STG Tables",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- STAGING: Load CSVs\n-- =============================================\nCOPY stg_patients(patient_id, name, sex, dob, insurance) \n    FROM '/data/patients.csv' WITH CSV HEADER;\n\nCOPY stg_slots(slot_id, appointment_date, appointment_time, is_available) \n    FROM '/data/slots.csv' WITH CSV HEADER;\n\nCOPY stg_appointments(appointment_id, slot_id, scheduling_date, appointment_date,\n    appointment_time, scheduling_interval, status, check_in_time, appointment_duration,\n    start_time, end_time, waiting_time, patient_id, sex, age, age_group) \n    FROM '/data/appointments.csv' WITH CSV HEADER;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -880,
+        240
+      ],
+      "id": "19542002-b70b-4832-9c09-b7c4d1767b73",
+      "name": "2. Load CSVs to STG",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- DWH: Create Schema\n-- =============================================\nDROP TABLE IF EXISTS fact_appointment CASCADE;\nDROP TABLE IF EXISTS dim_patient CASCADE;\nDROP TABLE IF EXISTS dim_insurance CASCADE;\nDROP TABLE IF EXISTS dim_status CASCADE;\nDROP TABLE IF EXISTS dim_age_group CASCADE;\nDROP TABLE IF EXISTS dim_time CASCADE;\nDROP TABLE IF EXISTS dim_date CASCADE;\n\n-- dim_date\nCREATE TABLE dim_date (\n    date_key        INTEGER PRIMARY KEY,\n    full_date       DATE NOT NULL UNIQUE,\n    day_of_week     SMALLINT NOT NULL,\n    day_name        VARCHAR(10) NOT NULL,\n    day_of_month    SMALLINT NOT NULL,\n    day_of_year     SMALLINT NOT NULL,\n    week_of_year    SMALLINT NOT NULL,\n    month_num       SMALLINT NOT NULL,\n    month_name      VARCHAR(10) NOT NULL,\n    quarter         SMALLINT NOT NULL,\n    year            SMALLINT NOT NULL,\n    is_weekend      BOOLEAN NOT NULL,\n    is_weekday      BOOLEAN NOT NULL\n);\n\n-- dim_time\nCREATE TABLE dim_time (\n    time_key         INTEGER PRIMARY KEY,\n    full_time        TIME NOT NULL UNIQUE,\n    hour_24          SMALLINT NOT NULL,\n    hour_12          SMALLINT NOT NULL,\n    minute           SMALLINT NOT NULL,\n    period           VARCHAR(2) NOT NULL,\n    time_slot        VARCHAR(15) NOT NULL,\n    day_period       VARCHAR(15) NOT NULL,\n    is_business_hour BOOLEAN NOT NULL\n);\n\n-- dim_status\nCREATE TABLE dim_status (\n    status_key      SERIAL PRIMARY KEY,\n    status_code     VARCHAR(20) NOT NULL UNIQUE,\n    status_name     VARCHAR(30) NOT NULL,\n    status_category VARCHAR(20) NOT NULL,\n    is_completed    BOOLEAN NOT NULL,\n    is_no_show      BOOLEAN NOT NULL\n);\n\n-- dim_age_group\nCREATE TABLE dim_age_group (\n    age_group_key   SERIAL PRIMARY KEY,\n    age_group_code  VARCHAR(10) NOT NULL UNIQUE,\n    age_min         SMALLINT NOT NULL,\n    age_max         SMALLINT NOT NULL,\n    age_bracket     VARCHAR(20) NOT NULL,\n    sort_order      SMALLINT NOT NULL\n);\n\n-- dim_insurance\nCREATE TABLE dim_insurance (\n    insurance_key   SERIAL PRIMARY KEY,\n    insurance_name  VARCHAR(50) NOT NULL UNIQUE\n);\n\n-- dim_patient\nCREATE TABLE dim_patient (\n    patient_key     SERIAL PRIMARY KEY,\n    patient_id      VARCHAR(10) NOT NULL UNIQUE,\n    patient_name    VARCHAR(60) NOT NULL,\n    sex             VARCHAR(15) NOT NULL,\n    date_of_birth   DATE NOT NULL,\n    insurance_key   INTEGER REFERENCES dim_insurance(insurance_key),\n    current_age     SMALLINT\n);\n\n-- fact_appointment\nCREATE TABLE fact_appointment (\n    appointment_key          SERIAL PRIMARY KEY,\n    appointment_id           VARCHAR(10) NOT NULL,\n    slot_id                  VARCHAR(10) NOT NULL,\n    appointment_date_key     INTEGER NOT NULL REFERENCES dim_date(date_key),\n    scheduling_date_key      INTEGER NOT NULL REFERENCES dim_date(date_key),\n    appointment_time_key     INTEGER NOT NULL REFERENCES dim_time(time_key),\n    patient_key              INTEGER REFERENCES dim_patient(patient_key),\n    status_key               INTEGER NOT NULL REFERENCES dim_status(status_key),\n    age_group_key            INTEGER REFERENCES dim_age_group(age_group_key),\n    scheduling_lead_days     SMALLINT,\n    appointment_duration_min NUMERIC(5,2),\n    waiting_time_min         NUMERIC(5,2),\n    age_at_appointment       SMALLINT,\n    is_same_day_booking      BOOLEAN,\n    arrived_early            BOOLEAN,\n    arrived_late             BOOLEAN\n);\n\nCREATE INDEX idx_fact_appt_date ON fact_appointment(appointment_date_key);\nCREATE INDEX idx_fact_sched_date ON fact_appointment(scheduling_date_key);\nCREATE INDEX idx_fact_patient ON fact_appointment(patient_key);\nCREATE INDEX idx_fact_status ON fact_appointment(status_key);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -656,
+        240
+      ],
+      "id": "4a517402-ff65-4c95-921f-5f4d9c543488",
+      "name": "3. Create DWH Schema",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- DWH: Populate dim_date (2014-2025)\n-- =============================================\nINSERT INTO dim_date\nSELECT \n    TO_CHAR(d, 'YYYYMMDD')::INT,\n    d,\n    EXTRACT(ISODOW FROM d)::SMALLINT,\n    TRIM(TO_CHAR(d, 'Day')),\n    EXTRACT(DAY FROM d)::SMALLINT,\n    EXTRACT(DOY FROM d)::SMALLINT,\n    EXTRACT(WEEK FROM d)::SMALLINT,\n    EXTRACT(MONTH FROM d)::SMALLINT,\n    TRIM(TO_CHAR(d, 'Month')),\n    EXTRACT(QUARTER FROM d)::SMALLINT,\n    EXTRACT(YEAR FROM d)::SMALLINT,\n    EXTRACT(ISODOW FROM d) IN (6,7),\n    EXTRACT(ISODOW FROM d) NOT IN (6,7)\nFROM generate_series('2014-01-01'::DATE, '2025-12-31'::DATE, '1 day') d;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -432,
+        -80
+      ],
+      "id": "013df852-5e89-43ff-8e14-0f237b25c3c0",
+      "name": "4a. dim_date",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO dim_time (\n    time_key, full_time, hour_24, hour_12, minute, period,\n    time_slot, day_period, is_business_hour\n)\nSELECT \n    (EXTRACT(HOUR FROM t)*100 + EXTRACT(MINUTE FROM t))::INT AS time_key,\n    t::TIME AS full_time,\n    EXTRACT(HOUR FROM t)::SMALLINT AS hour_24,\n    CASE \n        WHEN EXTRACT(HOUR FROM t)=0 THEN 12\n        WHEN EXTRACT(HOUR FROM t)>12 THEN EXTRACT(HOUR FROM t)-12\n        ELSE EXTRACT(HOUR FROM t)\n    END::SMALLINT AS hour_12,\n    EXTRACT(MINUTE FROM t)::SMALLINT AS minute,\n    CASE WHEN EXTRACT(HOUR FROM t)<12 THEN 'AM' ELSE 'PM' END AS period,\n    TO_CHAR(t,'HH24:MI')||'-'||TO_CHAR(t + INTERVAL '15 min','HH24:MI') AS time_slot,\n    CASE \n        WHEN EXTRACT(HOUR FROM t) BETWEEN 6 AND 11 THEN 'Morning'\n        WHEN EXTRACT(HOUR FROM t) BETWEEN 12 AND 17 THEN 'Afternoon'\n        ELSE 'Evening'\n    END AS day_period,\n    EXTRACT(HOUR FROM t) BETWEEN 8 AND 17 AS is_business_hour\nFROM generate_series(\n    '2026-01-27 00:00:00'::timestamp,\n    '2026-01-27 23:45:00'::timestamp,\n    '15 minutes'::interval\n) t;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -432,
+        112
+      ],
+      "id": "651a0ab5-ce5f-4196-9895-75087c9ccb0f",
+      "name": "4b. dim_time",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO dim_status (status_code, status_name, status_category, is_completed, is_no_show)\nSELECT \n    status AS status_code,\n    INITCAP(status) AS status_name,  -- Capitalize for nicer display\n    CASE \n        WHEN LOWER(status) IN ('completed', 'attended') THEN 'attended'\n        WHEN LOWER(status) IN ('no-show', 'did not attend', 'missed') THEN 'missed'\n        ELSE 'pending'\n    END AS status_category,\n    CASE \n        WHEN LOWER(status) = 'completed' THEN TRUE\n        ELSE FALSE\n    END AS is_completed,\n    CASE \n        WHEN LOWER(status) IN ('no-show', 'did not attend') THEN TRUE\n        ELSE FALSE\n    END AS is_no_show\nFROM stg_appointments\nWHERE status IS NOT NULL\nON CONFLICT (status_code) DO NOTHING;  -- avoid duplicates if rerun\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -432,
+        304
+      ],
+      "id": "95298deb-5017-4f80-b755-74a307a2f01c",
+      "name": "4c. dim_status",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- DWH: Populate dim_age_group (static)\n-- =============================================\nINSERT INTO dim_age_group (age_group_code, age_min, age_max, age_bracket, sort_order) VALUES\n    ('15-19', 15, 19, 'Young Adult', 1),\n    ('20-24', 20, 24, 'Young Adult', 2),\n    ('25-29', 25, 29, 'Adult', 3),\n    ('30-34', 30, 34, 'Adult', 4),\n    ('35-39', 35, 39, 'Adult', 5),\n    ('40-44', 40, 44, 'Adult', 6),\n    ('45-49', 45, 49, 'Middle Age', 7),\n    ('50-54', 50, 54, 'Middle Age', 8),\n    ('55-59', 55, 59, 'Middle Age', 9),\n    ('60-64', 60, 64, 'Senior', 10),\n    ('65-69', 65, 69, 'Senior', 11),\n    ('70-74', 70, 74, 'Senior', 12),\n    ('75-79', 75, 79, 'Senior', 13),\n    ('80-84', 80, 84, 'Elderly', 14),\n    ('85-89', 85, 89, 'Elderly', 15),\n    ('90+',   90, 120,'Elderly', 16);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -432,
+        496
+      ],
+      "id": "f7d48a45-c872-4a71-87d5-69ec18927487",
+      "name": "4d. dim_age_group",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT DISTINCT insurance FROM stg_patients WHERE insurance IS NOT NULL ORDER BY insurance;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        16,
+        208
+      ],
+      "id": "7e2e1354-f9c1-4b76-96b8-a9ea0067f7c2",
+      "name": "5a. Read Insurance from STG",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": "public",
+        "table": "dim_insurance",
+        "columns": {
+          "0": "i",
+          "1": "n",
+          "2": "s",
+          "3": "u",
+          "4": "r",
+          "5": "a",
+          "6": "n",
+          "7": "c",
+          "8": "e",
+          "9": "_",
+          "10": "n",
+          "11": "a",
+          "12": "m",
+          "13": "e",
+          "mappingMode": "defineBelow",
+          "value": {
+            "insurance_name": "={{ $json.insurance }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "insurance_key",
+              "displayName": "insurance_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "insurance_name",
+              "displayName": "insurance_name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        208
+      ],
+      "id": "99a46e46-6676-45f1-affa-7cebae46531d",
+      "name": "5b. Insert dim_insurance",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Transform and load patients from staging into dim_patient\nINSERT INTO dim_patient (\n    patient_id,\n    patient_name,\n    sex,\n    date_of_birth,\n    insurance_key,\n    current_age\n)\nSELECT\n    sp.patient_id,\n    sp.name,\n    sp.sex,\n    sp.dob::DATE AS date_of_birth,\n    di.insurance_key,\n    EXTRACT(YEAR FROM AGE(CURRENT_DATE, sp.dob::DATE))::SMALLINT AS current_age\nFROM stg_patients sp\nLEFT JOIN dim_insurance di\n    ON di.insurance_name = sp.insurance\nWHERE sp.dob IS NOT NULL;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        464,
+        208
+      ],
+      "id": "e5926de4-7044-45e8-8495-a90f74946b4d",
+      "name": "6c. Insert dim_patient",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM stg_appointments\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        688,
+        208
+      ],
+      "id": "d696421b-60f9-4c43-8474-b21148cfc0f3",
+      "name": "7a. Read Appointments from STG",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Helper functions\nconst timeToKey = (t) => {\n  if (!t || t.trim() === '') return null;\n  const [h, m] = t.split(':').map(Number);\n  return h * 100 + m;\n};\n\nconst isEarlier = (a, b) => {\n  if (!a || !b) return null;\n  const [ah, am] = a.split(':').map(Number);\n  const [bh, bm] = b.split(':').map(Number);\n  return ah * 60 + am < bh * 60 + bm;\n};\n\nconst isLater = (a, b) => {\n  if (!a || !b) return null;\n  const [ah, am] = a.split(':').map(Number);\n  const [bh, bm] = b.split(':').map(Number);\n  return ah * 60 + am > bh * 60 + bm;\n};\n\n// Helper for SQL-safe values\nconst sqlVal = (v) =>\n  v === null || v === undefined ? 'NULL'\n  : typeof v === 'string' ? `'${v.replace(/'/g, \"''\")}'`\n  : v;\n\n// Build VALUES rows\nconst values = $input.all().map(item => {\n  const j = item.json;\n\n  const apptDateKey = j.appointment_date?.replace(/-/g, '') ?? null;\n  const schedDateKey = j.scheduling_date?.replace(/-/g, '') ?? null;\n\n  return `(\n    ${sqlVal(j.appointment_id)},\n    ${sqlVal(j.slot_id)},\n    ${sqlVal(apptDateKey ? parseInt(apptDateKey) : null)},\n    ${sqlVal(schedDateKey ? parseInt(schedDateKey) : null)},\n    ${sqlVal(timeToKey(j.appointment_time))},\n    (SELECT patient_key FROM dim_patient WHERE patient_id = ${sqlVal(j.patient_id)}),\n    (SELECT status_key FROM dim_status WHERE status_code = ${sqlVal(j.status)}),\n    (SELECT age_group_key FROM dim_age_group WHERE age_group_code = ${sqlVal(j.age_group)}),\n    ${sqlVal(j.scheduling_interval ? parseInt(j.scheduling_interval) : null)},\n    ${sqlVal(j.appointment_duration ? parseFloat(j.appointment_duration) : null)},\n    ${sqlVal(j.waiting_time ? parseFloat(j.waiting_time) : null)},\n    ${sqlVal(j.age ? parseInt(j.age) : null)},\n    ${j.scheduling_date === j.appointment_date},\n    ${sqlVal(isEarlier(j.check_in_time, j.appointment_time))},\n    ${sqlVal(isLater(j.check_in_time, j.appointment_time))}\n  )`;\n}).join(',\\n');\n\n// Final SQL\nconst sql = `\nINSERT INTO fact_appointment (\n  appointment_id,\n  slot_id,\n  appointment_date_key,\n  scheduling_date_key,\n  appointment_time_key,\n  patient_key,\n  status_key,\n  age_group_key,\n  scheduling_lead_days,\n  appointment_duration_min,\n  waiting_time_min,\n  age_at_appointment,\n  is_same_day_booking,\n  arrived_early,\n  arrived_late\n)\nVALUES\n${values};\n`;\n\nreturn [\n  {\n    json: { sql }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        240
+      ],
+      "id": "62378c44-29e0-4790-b641-35874c57e5d9",
+      "name": "7b. Transform Appointments"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1536,
+        304
+      ],
+      "id": "1f7ef6a2-8cf6-452f-b661-6bbd2de3f000",
+      "name": "7c. Insert fact_appointment",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT 'dim_date' AS tbl, COUNT(*) AS cnt FROM dim_date\nUNION ALL SELECT 'dim_time', COUNT(*) FROM dim_time\nUNION ALL SELECT 'dim_status', COUNT(*) FROM dim_status\nUNION ALL SELECT 'dim_age_group', COUNT(*) FROM dim_age_group\nUNION ALL SELECT 'dim_insurance', COUNT(*) FROM dim_insurance\nUNION ALL SELECT 'dim_patient', COUNT(*) FROM dim_patient\nUNION ALL SELECT 'fact_appointment', COUNT(*) FROM fact_appointment\nORDER BY tbl;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1264,
+        48
+      ],
+      "id": "fb876e4a-dcc7-490c-a908-13f8e824667d",
+      "name": "8. Verify Counts",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 2000,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        912,
+        208
+      ],
+      "id": "372f0487-9a3b-4203-931e-d021c58a65b2",
+      "name": "Loop Over Items",
+      "executeOnce": false,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -192,
+        176
+      ],
+      "id": "29834239-496a-4759-9d02-291c2cd35a61",
+      "name": "Merge",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start ETL": {
+      "main": [
+        [
+          {
+            "node": "1. Create STG Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Create STG Tables": {
+      "main": [
+        [
+          {
+            "node": "2. Load CSVs to STG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Load CSVs to STG": {
+      "main": [
+        [
+          {
+            "node": "3. Create DWH Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Create DWH Schema": {
+      "main": [
+        [
+          {
+            "node": "4a. dim_date",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "4b. dim_time",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "4c. dim_status",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "4d. dim_age_group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4a. dim_date": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4b. dim_time": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "4c. dim_status": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "4d. dim_age_group": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "5a. Read Insurance from STG": {
+      "main": [
+        [
+          {
+            "node": "5b. Insert dim_insurance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5b. Insert dim_insurance": {
+      "main": [
+        [
+          {
+            "node": "6c. Insert dim_patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6c. Insert dim_patient": {
+      "main": [
+        [
+          {
+            "node": "7a. Read Appointments from STG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7a. Read Appointments from STG": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7b. Transform Appointments": {
+      "main": [
+        [
+          {
+            "node": "7c. Insert fact_appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7c. Insert fact_appointment": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "8. Verify Counts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "7b. Transform Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "5a. Read Insurance from STG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "da4d096c-c107-4d0a-a6dd-5fd250adcf8c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d3be751d8afea4582fbe5a683166007f2b82aa6e87df42cdc3f2f15964e7f0c5"
+  },
+  "id": "5qwBJtJH2cLprIhT",
+  "tags": []
+}
