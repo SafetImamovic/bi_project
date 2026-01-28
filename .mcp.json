@@ -27,6 +27,12 @@
             "env": {
                 "DATABASE_URI": "postgresql://postgres:bi_projekat@localhost:5432/medical_dwh"
             }
+        },
+        "powerbi-modeling-mcp": {
+            "type": "stdio",
+            "command": ".\\powerbi-mcp-server\\extension\\server\\powerbi-modeling-mcp.exe",
+            "args": ["--start"],
+            "env": {}
         }
     }
 }

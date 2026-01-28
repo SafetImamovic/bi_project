@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Medical Appointments BI Solution - a full-stack Business Intelligence system to analyze Medical Appointment No-Shows using Docker, PostgreSQL (Star Schema), n8n (ETL), SearxNG (AI Enrichment), and Power BI.
+Medical Appointments BI Solution - a full-stack Business Intelligence system for healthcare appointment analytics. Analyzes scheduling efficiency, patient behavior, operational performance, and resource utilization using Docker, PostgreSQL (Star Schema), n8n (ETL), SearxNG (AI Enrichment), and Power BI.
+
+## Key Analytics Areas
+
+- **Operational**: Slot utilization, throughput, appointment duration, on-time starts
+- **Patient Experience**: Wait times, arrival punctuality
+- **Scheduling**: No-show/cancellation rates, lead time, rebooking
+- **Demographics**: Age group, gender, insurance provider patterns
+- **Time-based**: Peak hours, day-of-week trends, seasonality
 
 ## Architecture
 
@@ -21,58 +29,47 @@ Medical Appointments BI Solution - a full-stack Business Intelligence system to 
 └─────────────┘
 ```
 
-**Star Schema**: `fact_appointment` with dimensions `dim_patient`, `dim_location`, `dim_date`
+## Databases
+
+- **stg_medical_dwh**: Staging (raw CSV data)
+- **medical_dwh**: Star schema DWH
+
+## Star Schema
+
+**Dimensions**: `dim_date`, `dim_time`, `dim_status`, `dim_age_group`, `dim_insurance`, `dim_patient`
+
+**Fact**: `fact_appointment` (grain: one row per appointment)
 
 ## Docker Services
 
 Main stack (`docker-compose.yml`):
 - **n8n**: ETL workflow automation (:5678)
-- **db**: PostgreSQL database
+- **db**: PostgreSQL database (:5432)
 - **adminer**: Database UI (:8765)
 
-SearxNG stack (`searxng-docker/docker-compose.yaml`):
-- **searxng**: Meta search engine (:8080)
-- **redis**: Cache backend
-- **caddy**: Reverse proxy
+## Environment
+
+Credentials in `.env` (copy from `.env.example`):
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`
+- `N8N_BASIC_AUTH_USER`, `N8N_BASIC_AUTH_PASSWORD`
 
 ## Common Commands
 
 ```bash
-# Start main services
+# Start services
 docker compose up -d
 
-# Start SearxNG (separate compose in submodule)
-cd searxng-docker && docker compose up -d
+# Create databases
+docker compose exec db psql -U postgres -c "CREATE DATABASE stg_medical_dwh;"
+docker compose exec db psql -U postgres -c "CREATE DATABASE medical_dwh;"
 
-# Create shared network for inter-stack communication
-docker network create bi_projekat || true
-docker network connect bi_projekat searxng
-
-# Import n8n workflow from container
-docker exec -it -u node <container_id> n8n import:workflow --separate --input=/home/node/workflows/
-
-# Validate Docker Compose config
+# Validate config
 docker compose config -q
 ```
 
-## Service Connections
-
-| Service | Internal Host | Port | Credentials |
-|---------|--------------|------|-------------|
-| PostgreSQL | `db` | 5432 | postgres / bi_projekat |
-| Adminer | localhost | 8765 | - |
-| n8n | localhost | 5678 | username / password |
-| SearxNG | `searxng` | 8080 | - |
-
-## CI/CD
-
-GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR to main:
-1. Validates Docker Compose configuration
-2. Checks for `local-files/init.sql` existence (SQL linting placeholder)
-
 ## Key Paths
 
-- `n8n/workflows/`: n8n workflow JSON files (mounted to container at `/home/node/workflows`)
-- `local-files/init.sql`: Database schema initialization script
-- `local-files/csv_dropzone/`: Drop CSV data files here for ETL processing
+- `data/`: Source CSV files (patients, slots, appointments)
+- `n8n/workflows/etl_medical_appointments.json`: ETL workflow
+- `.env`: Environment variables (git-ignored)
 - `searxng-docker/`: SearxNG git submodule

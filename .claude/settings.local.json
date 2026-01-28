@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(claude mcp --help:*)"
+      "Bash(claude mcp --help:*)",
+      "Bash(dir:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\User\\\\Development\\\\bi_project\\\\powerbi-mcp-server\\\\extension\\\\server\"\" 2>/dev/null || echo \"Directory not found \")",
+      "Bash(test:*)",
+      "Bash(claude --debug:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
