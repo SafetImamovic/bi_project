@@ -34,6 +34,38 @@ No endorsement by the original author is implied.
 No warranties are given. Other rights such as privacy, publicity, or moral rights
 may apply.
 
+## Power BI Modeling MCP Server
+
+This project includes a locally bundled installation of the **Power BI Modeling MCP Server**
+for convenience and reproducibility.
+
+- **Source repository:**  
+  <https://github.com/microsoft/powerbi-modeling-mcp>
+- **License:** MIT License
+- **Author:** Microsoft
+
+### Installation Method
+
+The MCP server is not distributed as a standalone binary in the source repository.
+Instead, it was installed by:
+
+1. Downloading the official VSIX package from the Visual Studio Marketplace
+2. Extracting the server executable as documented by Microsoft
+3. Placing the unmodified server files inside this repository
+
+No modifications have been made to the MCP server binaries or source files.
+
+### Purpose
+
+The MCP server is included to:
+
+- Simplify setup for reviewers and collaborators
+- Ensure consistent Power BI modeling behavior
+- Avoid environment-specific installation steps
+
+This project does **not** claim ownership of the MCP server.
+No endorsement by Microsoft is implied.
+
 ## Table of Contents
 
 - [Overview](#overview)
