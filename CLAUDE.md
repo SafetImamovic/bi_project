@@ -71,6 +71,22 @@ All credentials centralized in root `.env` (copy from `.env.example`):
 
 ## Common Commands
 
+**Setup Scripts (Recommended):**
+```powershell
+# Windows
+.\setup.ps1 setup       # Full setup
+.\setup.ps1 etl-run     # Run ETL
+.\setup.ps1 bot-start   # Start Discord bot
+```
+
+```bash
+# Linux/macOS
+./setup.sh setup        # Full setup
+./setup.sh etl-run      # Run ETL
+./setup.sh bot-start    # Start Discord bot
+```
+
+**Manual Commands:**
 ```bash
 # Start services
 docker compose up -d

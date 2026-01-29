@@ -274,25 +274,80 @@ The `CLAUDE.md` file provides context to Claude Code instances:
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- Git
-- Power BI Desktop (for visualization)
+- **Docker Desktop** (with Docker Compose)
+- **Node.js** v18+ and npm
+- **Git**
+- **Power BI Desktop** (for visualization)
 
-### 1. Clone the Repository
+### Quick Start (Automated)
+
+The project includes setup scripts for automated installation:
+
+**Windows (PowerShell):**
+```powershell
+# Full setup
+.\setup.ps1 setup
+
+# After setup, run the ETL
+.\setup.ps1 etl-run
+
+# Deploy Discord commands and start bot
+.\setup.ps1 bot-deploy
+.\setup.ps1 bot-start
+```
+
+**Linux/macOS (Bash):**
+```bash
+# Make executable
+chmod +x setup.sh
+
+# Full setup
+./setup.sh setup
+
+# After setup, run the ETL
+./setup.sh etl-run
+
+# Deploy Discord commands and start bot
+./setup.sh bot-deploy
+./setup.sh bot-start
+```
+
+### Setup Script Commands
+
+| Command | Description |
+|---------|-------------|
+| `setup` | Full initial setup (Docker, databases, n8n workflow, Discord bot deps) |
+| `start` | Start Docker services only |
+| `stop` | Stop Docker services |
+| `reset` | Reset databases (destructive - deletes all data) |
+| `cleanup` | Full cleanup - removes containers, volumes, node_modules |
+| `etl-run` | Execute the ETL workflow via n8n API |
+| `bot-deploy` | Register Discord slash commands |
+| `bot-start` | Start the Discord bot (foreground) |
+| `help` | Show help message |
+
+---
+
+### Manual Setup
+
+If you prefer manual setup or the script encounters issues:
+
+#### 1. Clone the Repository
 
 ```bash
 git clone --recurse-submodules https://github.com/your-username/bi_project.git
 cd bi_project
 ```
 
-### 2. Configure Environment
+#### 2. Configure Environment
 
 ```bash
 # Copy example env file
 cp .env.example .env
 
-# Edit with your credentials (optional - defaults work for local dev)
-# nano .env
+# Edit with your credentials
+# Windows: notepad .env
+# Linux/Mac: nano .env
 ```
 
 **Environment Variables:**
@@ -312,7 +367,7 @@ cp .env.example .env
 | `DISCORD_CLIENT_ID` | - | Discord application ID |
 | `DISCORD_GUILD_ID` | - | Discord server ID |
 
-### 3. Start Docker Services
+#### 3. Start Docker Services
 
 ```bash
 # Start main stack
@@ -326,70 +381,70 @@ docker compose ps
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| n8n | <http://localhost:5678> | username / password |
-| Adminer | <http://localhost:8765> | postgres / bi_projekat |
-| PostgreSQL | localhost:5432 | postgres / bi_projekat |
+| n8n | <http://localhost:5678> | from .env |
+| Adminer | <http://localhost:8765> | postgres / (from .env) |
+| PostgreSQL | localhost:5432 | postgres / (from .env) |
 
-### 4. Create Databases
-
-Connect to PostgreSQL and create the staging and DWH databases:
+#### 4. Create Databases
 
 ```bash
-# Via docker exec
 docker compose exec db psql -U postgres -c "CREATE DATABASE stg_medical_dwh;"
 docker compose exec db psql -U postgres -c "CREATE DATABASE medical_dwh;"
 ```
 
-Or use Adminer (<http://localhost:8765>) to run:
-
-```sql
-CREATE DATABASE stg_medical_dwh;
-CREATE DATABASE medical_dwh;
-```
-
-### 5. Load n8n Workflow
+#### 5. Import n8n Workflow
 
 1. Open n8n at <http://localhost:5678>
 2. Login with credentials from `.env`
 3. Go to **Workflows** → **Import from File**
-4. Import `/home/node/workflows/etl_medical_appointments.json`
+4. Import `n8n/workflows/ETL Medical Appointments.json`
 
-### 6. Configure n8n Credentials
+#### 6. Configure n8n PostgreSQL Credentials
 
-Create two PostgreSQL credentials in n8n:
+In n8n, create a PostgreSQL credential:
 
-**Postgres STG:**
+- **Host:** `db`
+- **Database:** `medical_dwh`
+- **User:** `postgres`
+- **Password:** (from .env)
+- **Port:** `5432`
 
-- Host: `db`
-- Database: `stg_medical_dwh`
-- User: `postgres`
-- Password: `bi_projekat`
+#### 7. Run ETL
 
-**Postgres DWH:**
-
-- Host: `db`
-- Database: `medical_dwh`
-- User: `postgres`
-- Password: `bi_projekat`
-
-### 7. Run ETL
-
-1. Open the imported workflow
+1. Open the imported workflow in n8n
 2. Click **Execute Workflow**
 3. Verify row counts in the final node output
 
-### 8. (Optional) Start SearxNG
+Expected counts:
+```
+dim_date: 4383
+dim_time: 96
+dim_status: 3
+dim_age_group: 16
+dim_insurance: 5
+dim_patient: 1000
+fact_appointment: 50000
+agg_daily: ~3653
+agg_monthly: ~120
+agg_yearly: ~10
+```
 
-For AI-powered data enrichment:
+#### 8. Setup Discord Bot
 
 ```bash
-cd searxng-docker
-docker compose up -d
-
-# Connect to shared network
-docker network create bi_projekat || true
-docker network connect bi_projekat searxng
+cd discord-bot
+npm install
+node deploy-commands.js  # Register slash commands
+node index.js            # Start bot
 ```
+
+#### 9. (Optional) Start ngrok for Webhooks
+
+```bash
+ngrok http 5678 --authtoken $NGROK_AUTHTOKEN --domain $NGROK_DOMAIN
+```
+
+Update `N8N_WEBHOOK_URL` in `.env` with the ngrok URL.
 
 ---
 
@@ -736,6 +791,8 @@ bi_project/
 ├── .mcp.json               # MCP server configuration
 ├── CLAUDE.md               # Claude Code context
 ├── README.md               # This file
+├── setup.ps1               # Windows setup script (PowerShell)
+├── setup.sh                # Unix setup script (Bash)
 ├── docker-compose.yml      # Main services
 ├── data/
 │   ├── DATA-STRUCTURE.md   # Dataset documentation
@@ -758,6 +815,32 @@ bi_project/
 ```
 
 ### Commands
+
+**Using Setup Scripts (Recommended):**
+
+```powershell
+# Windows PowerShell
+.\setup.ps1 setup       # Full setup
+.\setup.ps1 start       # Start services
+.\setup.ps1 stop        # Stop services
+.\setup.ps1 etl-run     # Run ETL
+.\setup.ps1 bot-start   # Start Discord bot
+.\setup.ps1 reset       # Reset databases
+.\setup.ps1 cleanup     # Full cleanup
+```
+
+```bash
+# Linux/macOS Bash
+./setup.sh setup        # Full setup
+./setup.sh start        # Start services
+./setup.sh stop         # Stop services
+./setup.sh etl-run      # Run ETL
+./setup.sh bot-start    # Start Discord bot
+./setup.sh reset        # Reset databases
+./setup.sh cleanup      # Full cleanup
+```
+
+**Manual Docker Commands:**
 
 ```bash
 # Start services
