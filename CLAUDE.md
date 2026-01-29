@@ -40,6 +40,11 @@ Medical Appointments BI Solution - a full-stack Business Intelligence system for
 
 **Fact**: `fact_appointment` (grain: one row per appointment)
 
+**Aggregates** (pre-calculated metrics):
+- `agg_daily`: Daily KPIs (appointments, no-shows, rates, revenue)
+- `agg_monthly`: Monthly rollups with MoM growth %
+- `agg_yearly`: Yearly totals with YoY comparisons built-in
+
 ## Docker Services
 
 Main stack (`docker-compose.yml`):

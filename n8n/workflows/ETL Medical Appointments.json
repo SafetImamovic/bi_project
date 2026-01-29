@@ -328,14 +328,58 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT 'dim_date' AS tbl, COUNT(*) AS cnt FROM dim_date\nUNION ALL SELECT 'dim_time', COUNT(*) FROM dim_time\nUNION ALL SELECT 'dim_status', COUNT(*) FROM dim_status\nUNION ALL SELECT 'dim_age_group', COUNT(*) FROM dim_age_group\nUNION ALL SELECT 'dim_insurance', COUNT(*) FROM dim_insurance\nUNION ALL SELECT 'dim_patient', COUNT(*) FROM dim_patient\nUNION ALL SELECT 'fact_appointment', COUNT(*) FROM fact_appointment\nORDER BY tbl;",
+        "query": "-- =============================================\n-- AGGREGATE TABLES: Create schema\n-- =============================================\nDROP TABLE IF EXISTS agg_yearly CASCADE;\nDROP TABLE IF EXISTS agg_monthly CASCADE;\nDROP TABLE IF EXISTS agg_daily CASCADE;\n\n-- Daily aggregates\nCREATE TABLE agg_daily (\n    date_key                 INTEGER PRIMARY KEY REFERENCES dim_date(date_key),\n    full_date                DATE NOT NULL,\n    year                     SMALLINT NOT NULL,\n    month_num                SMALLINT NOT NULL,\n    day_of_week              SMALLINT NOT NULL,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2),\n    cancellation_rate        NUMERIC(5,2),\n    completion_rate          NUMERIC(5,2),\n    avg_wait_time_min        NUMERIC(6,2),\n    avg_duration_min         NUMERIC(6,2),\n    avg_lead_days            NUMERIC(6,2),\n    same_day_bookings        INTEGER NOT NULL DEFAULT 0,\n    early_arrivals           INTEGER NOT NULL DEFAULT 0,\n    late_arrivals            INTEGER NOT NULL DEFAULT 0,\n    est_revenue              NUMERIC(12,2),\n    est_revenue_lost         NUMERIC(12,2)\n);\n\n-- Monthly aggregates\nCREATE TABLE agg_monthly (\n    year                     SMALLINT NOT NULL,\n    month_num                SMALLINT NOT NULL,\n    month_name               VARCHAR(10) NOT NULL,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2),\n    cancellation_rate        NUMERIC(5,2),\n    completion_rate          NUMERIC(5,2),\n    avg_wait_time_min        NUMERIC(6,2),\n    avg_duration_min         NUMERIC(6,2),\n    avg_lead_days            NUMERIC(6,2),\n    working_days             INTEGER,\n    avg_daily_appointments   NUMERIC(6,2),\n    est_revenue              NUMERIC(12,2),\n    est_revenue_lost         NUMERIC(12,2),\n    prev_month_appointments  INTEGER,\n    mom_growth_pct           NUMERIC(6,2),\n    PRIMARY KEY (year, month_num)\n);\n\n-- Yearly aggregates with YoY\nCREATE TABLE agg_yearly (\n    year                     SMALLINT PRIMARY KEY,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2),\n    cancellation_rate        NUMERIC(5,2),\n    completion_rate          NUMERIC(5,2),\n    avg_wait_time_min        NUMERIC(6,2),\n    avg_duration_min         NUMERIC(6,2),\n    avg_lead_days            NUMERIC(6,2),\n    working_days             INTEGER,\n    avg_daily_appointments   NUMERIC(6,2),\n    est_revenue              NUMERIC(12,2),\n    est_revenue_lost         NUMERIC(12,2),\n    -- YoY comparisons\n    prev_year_appointments   INTEGER,\n    prev_year_no_shows       INTEGER,\n    prev_year_patients       INTEGER,\n    prev_year_revenue        NUMERIC(12,2),\n    yoy_appointments_pct     NUMERIC(6,2),\n    yoy_no_shows_pct         NUMERIC(6,2),\n    yoy_patients_pct         NUMERIC(6,2),\n    yoy_revenue_pct          NUMERIC(6,2),\n    yoy_no_show_rate_delta   NUMERIC(5,2)\n);\n\nCREATE INDEX idx_agg_daily_year ON agg_daily(year);\nCREATE INDEX idx_agg_daily_month ON agg_daily(year, month_num);",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1264,
-        48
+        1760,
+        240
+      ],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "9. Create Aggregate Tables",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- POPULATE: Daily aggregates\n-- =============================================\nINSERT INTO agg_daily\nSELECT\n    d.date_key,\n    d.full_date,\n    d.year,\n    d.month_num,\n    d.day_of_week,\n    COUNT(f.appointment_key) AS total_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') AS completed_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) AS no_show_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'cancelled') AS cancelled_appointments,\n    COUNT(DISTINCT f.patient_key) AS unique_patients,\n    ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) / NULLIF(COUNT(f.appointment_key), 0), 2) AS no_show_rate,\n    ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'cancelled') / NULLIF(COUNT(f.appointment_key), 0), 2) AS cancellation_rate,\n    ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') / NULLIF(COUNT(f.appointment_key), 0), 2) AS completion_rate,\n    ROUND(AVG(f.waiting_time_min), 2) AS avg_wait_time_min,\n    ROUND(AVG(f.appointment_duration_min), 2) AS avg_duration_min,\n    ROUND(AVG(f.scheduling_lead_days), 2) AS avg_lead_days,\n    COUNT(f.appointment_key) FILTER (WHERE f.is_same_day_booking = TRUE) AS same_day_bookings,\n    COUNT(f.appointment_key) FILTER (WHERE f.arrived_early = TRUE) AS early_arrivals,\n    COUNT(f.appointment_key) FILTER (WHERE f.arrived_late = TRUE) AS late_arrivals,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') * 150.00 AS est_revenue,\n    COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) * 150.00 AS est_revenue_lost\nFROM dim_date d\nLEFT JOIN fact_appointment f ON f.appointment_date_key = d.date_key\nLEFT JOIN dim_status s ON f.status_key = s.status_key\nWHERE d.full_date BETWEEN '2015-01-01' AND '2024-12-31'\nGROUP BY d.date_key, d.full_date, d.year, d.month_num, d.day_of_week;\n\n-- =============================================\n-- POPULATE: Monthly aggregates\n-- =============================================\nINSERT INTO agg_monthly\nWITH monthly_base AS (\n    SELECT\n        ad.year,\n        ad.month_num,\n        MAX(dd.month_name) AS month_name,\n        SUM(ad.total_appointments) AS total_appointments,\n        SUM(ad.completed_appointments) AS completed_appointments,\n        SUM(ad.no_show_appointments) AS no_show_appointments,\n        SUM(ad.cancelled_appointments) AS cancelled_appointments,\n        COUNT(DISTINCT ad.date_key) FILTER (WHERE ad.total_appointments > 0) AS working_days,\n        SUM(ad.est_revenue) AS est_revenue,\n        SUM(ad.est_revenue_lost) AS est_revenue_lost\n    FROM agg_daily ad\n    JOIN dim_date dd ON ad.date_key = dd.date_key\n    GROUP BY ad.year, ad.month_num\n),\nmonthly_patients AS (\n    SELECT\n        d.year,\n        d.month_num,\n        COUNT(DISTINCT f.patient_key) AS unique_patients,\n        AVG(f.waiting_time_min) AS avg_wait_time_min,\n        AVG(f.appointment_duration_min) AS avg_duration_min,\n        AVG(f.scheduling_lead_days) AS avg_lead_days\n    FROM fact_appointment f\n    JOIN dim_date d ON f.appointment_date_key = d.date_key\n    GROUP BY d.year, d.month_num\n)\nSELECT\n    mb.year,\n    mb.month_num,\n    mb.month_name,\n    mb.total_appointments,\n    mb.completed_appointments,\n    mb.no_show_appointments,\n    mb.cancelled_appointments,\n    COALESCE(mp.unique_patients, 0),\n    ROUND(100.0 * mb.no_show_appointments / NULLIF(mb.total_appointments, 0), 2),\n    ROUND(100.0 * mb.cancelled_appointments / NULLIF(mb.total_appointments, 0), 2),\n    ROUND(100.0 * mb.completed_appointments / NULLIF(mb.total_appointments, 0), 2),\n    ROUND(mp.avg_wait_time_min, 2),\n    ROUND(mp.avg_duration_min, 2),\n    ROUND(mp.avg_lead_days, 2),\n    mb.working_days,\n    ROUND(mb.total_appointments::NUMERIC / NULLIF(mb.working_days, 0), 2),\n    mb.est_revenue,\n    mb.est_revenue_lost,\n    LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num),\n    ROUND(100.0 * (mb.total_appointments - LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num)) / NULLIF(LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num), 0), 2)\nFROM monthly_base mb\nLEFT JOIN monthly_patients mp ON mb.year = mp.year AND mb.month_num = mp.month_num\nWHERE mb.total_appointments > 0;\n\n-- =============================================\n-- POPULATE: Yearly aggregates with YoY\n-- =============================================\nINSERT INTO agg_yearly\nWITH yearly_base AS (\n    SELECT\n        year,\n        SUM(total_appointments) AS total_appointments,\n        SUM(completed_appointments) AS completed_appointments,\n        SUM(no_show_appointments) AS no_show_appointments,\n        SUM(cancelled_appointments) AS cancelled_appointments,\n        SUM(working_days) AS working_days,\n        SUM(est_revenue) AS est_revenue,\n        SUM(est_revenue_lost) AS est_revenue_lost\n    FROM agg_monthly\n    GROUP BY year\n),\nyearly_patients AS (\n    SELECT\n        d.year,\n        COUNT(DISTINCT f.patient_key) AS unique_patients,\n        AVG(f.waiting_time_min) AS avg_wait_time_min,\n        AVG(f.appointment_duration_min) AS avg_duration_min,\n        AVG(f.scheduling_lead_days) AS avg_lead_days\n    FROM fact_appointment f\n    JOIN dim_date d ON f.appointment_date_key = d.date_key\n    GROUP BY d.year\n)\nSELECT\n    yb.year,\n    yb.total_appointments,\n    yb.completed_appointments,\n    yb.no_show_appointments,\n    yb.cancelled_appointments,\n    COALESCE(yp.unique_patients, 0),\n    ROUND(100.0 * yb.no_show_appointments / NULLIF(yb.total_appointments, 0), 2),\n    ROUND(100.0 * yb.cancelled_appointments / NULLIF(yb.total_appointments, 0), 2),\n    ROUND(100.0 * yb.completed_appointments / NULLIF(yb.total_appointments, 0), 2),\n    ROUND(yp.avg_wait_time_min, 2),\n    ROUND(yp.avg_duration_min, 2),\n    ROUND(yp.avg_lead_days, 2),\n    yb.working_days,\n    ROUND(yb.total_appointments::NUMERIC / NULLIF(yb.working_days, 0), 2),\n    yb.est_revenue,\n    yb.est_revenue_lost,\n    -- YoY comparisons\n    LAG(yb.total_appointments) OVER (ORDER BY yb.year),\n    LAG(yb.no_show_appointments) OVER (ORDER BY yb.year),\n    LAG(yp.unique_patients) OVER (ORDER BY yb.year),\n    LAG(yb.est_revenue) OVER (ORDER BY yb.year),\n    ROUND(100.0 * (yb.total_appointments - LAG(yb.total_appointments) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.total_appointments) OVER (ORDER BY yb.year), 0), 2),\n    ROUND(100.0 * (yb.no_show_appointments - LAG(yb.no_show_appointments) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.no_show_appointments) OVER (ORDER BY yb.year), 0), 2),\n    ROUND(100.0 * (yp.unique_patients - LAG(yp.unique_patients) OVER (ORDER BY yb.year)) / NULLIF(LAG(yp.unique_patients) OVER (ORDER BY yb.year), 0), 2),\n    ROUND(100.0 * (yb.est_revenue - LAG(yb.est_revenue) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.est_revenue) OVER (ORDER BY yb.year), 0), 2),\n    ROUND((100.0 * yb.no_show_appointments / NULLIF(yb.total_appointments, 0)) - (100.0 * LAG(yb.no_show_appointments) OVER (ORDER BY yb.year) / NULLIF(LAG(yb.total_appointments) OVER (ORDER BY yb.year), 0)), 2)\nFROM yearly_base yb\nLEFT JOIN yearly_patients yp ON yb.year = yp.year;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1984,
+        240
+      ],
+      "id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "name": "10. Populate Aggregates",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT 'dim_date' AS tbl, COUNT(*) AS cnt FROM dim_date\nUNION ALL SELECT 'dim_time', COUNT(*) FROM dim_time\nUNION ALL SELECT 'dim_status', COUNT(*) FROM dim_status\nUNION ALL SELECT 'dim_age_group', COUNT(*) FROM dim_age_group\nUNION ALL SELECT 'dim_insurance', COUNT(*) FROM dim_insurance\nUNION ALL SELECT 'dim_patient', COUNT(*) FROM dim_patient\nUNION ALL SELECT 'fact_appointment', COUNT(*) FROM fact_appointment\nUNION ALL SELECT 'agg_daily', COUNT(*) FROM agg_daily\nUNION ALL SELECT 'agg_monthly', COUNT(*) FROM agg_monthly\nUNION ALL SELECT 'agg_yearly', COUNT(*) FROM agg_yearly\nORDER BY tbl;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2208,
+        240
       ],
       "id": "fb876e4a-dcc7-490c-a908-13f8e824667d",
       "name": "8. Verify Counts",
@@ -554,7 +598,7 @@
       "main": [
         [
           {
-            "node": "8. Verify Counts",
+            "node": "9. Create Aggregate Tables",
             "type": "main",
             "index": 0
           }
@@ -562,6 +606,28 @@
         [
           {
             "node": "7b. Transform Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9. Create Aggregate Tables": {
+      "main": [
+        [
+          {
+            "node": "10. Populate Aggregates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10. Populate Aggregates": {
+      "main": [
+        [
+          {
+            "node": "8. Verify Counts",
             "type": "main",
             "index": 0
           }

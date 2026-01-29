@@ -10,6 +10,12 @@ services:
       - ./local-files:/home/node/local-files
       - n8n_data:/home/node/.n8n
     environment:
+      - N8N_HOST=https://unsocialised-sweetless-journee.ngrok-free.dev/
+      - N8N_PROTOCOL=https
+      - N8N_PORT=5678
+      - WEBHOOK_URL=https://unsocialised-sweetless-journee.ngrok-free.dev/
+      - N8N_COMMUNITY_PACKAGES_ENABLED=true
+      - N8N_INSTALL_PACKAGES=n8n-nodes-discord-trigger
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
