@@ -1,3 +1,19 @@
+# Environment files (contain secrets)
 .env
+discord-bot/.env
+
+# Dependencies
 node_modules/
+discord-bot/node_modules/
+
+# Lock files
 package-lock.json
+discord-bot/package-lock.json
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

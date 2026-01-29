@@ -6,10 +6,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -1328,
-        240
+        -1040,
+        336
       ],
-      "id": "4839d397-926e-41c4-a48a-5003045e4b89",
+      "id": "3358ef65-495b-4219-9d20-53fb7efd1d31",
       "name": "Start ETL"
     },
     {
@@ -21,10 +21,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -1104,
-        240
+        -816,
+        336
       ],
-      "id": "bbaabf3d-2c3d-4103-a787-9ac8fec1e9da",
+      "id": "12921c43-604c-4426-be4c-3d65a3baeaa7",
       "name": "1. Create STG Tables",
       "credentials": {
         "postgres": {
@@ -42,10 +42,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -880,
-        240
+        -592,
+        336
       ],
-      "id": "19542002-b70b-4832-9c09-b7c4d1767b73",
+      "id": "f9136774-68f0-40c9-aa19-2acb6eff1f83",
       "name": "2. Load CSVs to STG",
       "credentials": {
         "postgres": {
@@ -63,10 +63,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -656,
-        240
+        -368,
+        336
       ],
-      "id": "4a517402-ff65-4c95-921f-5f4d9c543488",
+      "id": "168da0f1-3d18-4871-82cc-1e5e69484b23",
       "name": "3. Create DWH Schema",
       "credentials": {
         "postgres": {
@@ -84,10 +84,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -432,
-        -80
+        -144,
+        16
       ],
-      "id": "013df852-5e89-43ff-8e14-0f237b25c3c0",
+      "id": "f78c2977-f49a-427b-a536-a6a6f0840f38",
       "name": "4a. dim_date",
       "credentials": {
         "postgres": {
@@ -105,10 +105,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -432,
-        112
+        -144,
+        208
       ],
-      "id": "651a0ab5-ce5f-4196-9895-75087c9ccb0f",
+      "id": "159e96e6-8814-482d-a930-c515f53739f3",
       "name": "4b. dim_time",
       "credentials": {
         "postgres": {
@@ -126,10 +126,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -432,
-        304
+        -144,
+        400
       ],
-      "id": "95298deb-5017-4f80-b755-74a307a2f01c",
+      "id": "e4c81cbf-25c4-4000-b407-6a37601f3736",
       "name": "4c. dim_status",
       "credentials": {
         "postgres": {
@@ -147,10 +147,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -432,
-        496
+        -144,
+        592
       ],
-      "id": "f7d48a45-c872-4a71-87d5-69ec18927487",
+      "id": "e8f78879-fdd1-4653-9ae2-7de923202536",
       "name": "4d. dim_age_group",
       "credentials": {
         "postgres": {
@@ -168,10 +168,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        16,
-        208
+        304,
+        304
       ],
-      "id": "7e2e1354-f9c1-4b76-96b8-a9ea0067f7c2",
+      "id": "16cb4559-7c98-458c-a173-c3749621fcea",
       "name": "5a. Read Insurance from STG",
       "executeOnce": true,
       "credentials": {
@@ -235,10 +235,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        240,
-        208
+        528,
+        304
       ],
-      "id": "99a46e46-6676-45f1-affa-7cebae46531d",
+      "id": "0932a1f5-b26b-42da-954a-404f62e0baa0",
       "name": "5b. Insert dim_insurance",
       "credentials": {
         "postgres": {
@@ -256,10 +256,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        464,
-        208
+        752,
+        304
       ],
-      "id": "e5926de4-7044-45e8-8495-a90f74946b4d",
+      "id": "60dc4865-1653-42a5-ad7f-9b96bcf720e0",
       "name": "6c. Insert dim_patient",
       "executeOnce": true,
       "alwaysOutputData": true,
@@ -279,10 +279,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        688,
-        208
+        976,
+        304
       ],
-      "id": "d696421b-60f9-4c43-8474-b21148cfc0f3",
+      "id": "04f1c13c-8a2d-4366-83eb-bbd24508b59c",
       "name": "7a. Read Appointments from STG",
       "credentials": {
         "postgres": {
@@ -298,10 +298,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1264,
-        240
+        1552,
+        336
       ],
-      "id": "62378c44-29e0-4790-b641-35874c57e5d9",
+      "id": "d39e61a1-77f5-455b-b93e-edd8b911a84b",
       "name": "7b. Transform Appointments"
     },
     {
@@ -313,10 +313,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1536,
-        304
+        1824,
+        400
       ],
-      "id": "1f7ef6a2-8cf6-452f-b661-6bbd2de3f000",
+      "id": "425eb33f-0745-4d3c-bd41-dbef8e0d6387",
       "name": "7c. Insert fact_appointment",
       "credentials": {
         "postgres": {
@@ -334,10 +334,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1760,
-        240
+        1824,
+        128
       ],
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "id": "26ff5f27-e0ea-4ebb-a391-21fd6bb8324f",
       "name": "9. Create Aggregate Tables",
       "executeOnce": true,
       "credentials": {
@@ -356,10 +356,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1984,
-        240
+        2048,
+        128
       ],
-      "id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "id": "416a3ab1-ba32-4209-94d0-abafc529cbaa",
       "name": "10. Populate Aggregates",
       "executeOnce": true,
       "credentials": {
@@ -378,10 +378,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        2208,
-        240
+        112,
+        976
       ],
-      "id": "fb876e4a-dcc7-490c-a908-13f8e824667d",
+      "id": "8de0659b-0ebd-49f5-82ee-da3991076a2a",
       "name": "8. Verify Counts",
       "executeOnce": true,
       "credentials": {
@@ -399,10 +399,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        912,
-        208
+        1200,
+        304
       ],
-      "id": "372f0487-9a3b-4203-931e-d021c58a65b2",
+      "id": "085536a6-8eba-49d7-a21b-de6dc4dc8384",
       "name": "Loop Over Items",
       "executeOnce": false,
       "alwaysOutputData": true
@@ -414,13 +414,56 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -192,
-        176
+        96,
+        272
       ],
-      "id": "29834239-496a-4759-9d02-291c2cd35a61",
+      "id": "fa24bc27-4c82-4ecc-8e32-2afa159203f7",
       "name": "Merge",
       "alwaysOutputData": true,
       "executeOnce": true
+    },
+    {
+      "parameters": {
+        "path": "346ac09a-5cbe-4970-8a7b-6765876ff5da",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        976
+      ],
+      "id": "8c34829c-337d-401e-9107-0770384ac9fb",
+      "name": "Webhook",
+      "webhookId": "346ac09a-5cbe-4970-8a7b-6765876ff5da"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        352,
+        976
+      ],
+      "id": "bec9b336-3830-4859-b863-6084ec531be8",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        560,
+        976
+      ],
+      "id": "75b51ac6-136d-483e-a661-17e8956acd36",
+      "name": "Respond to Webhook"
     }
   ],
   "pinData": {},
@@ -625,13 +668,7 @@
     },
     "10. Populate Aggregates": {
       "main": [
-        [
-          {
-            "node": "8. Verify Counts",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Merge": {
@@ -644,13 +681,46 @@
           }
         ]
       ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "8. Verify Counts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Verify Counts": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "da4d096c-c107-4d0a-a6dd-5fd250adcf8c",
+  "versionId": "2a94d9c6-ec95-4200-b807-bea7343eeefa",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d3be751d8afea4582fbe5a683166007f2b82aa6e87df42cdc3f2f15964e7f0c5"

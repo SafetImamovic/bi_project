@@ -76,6 +76,7 @@ No endorsement by Microsoft is implied.
 - [Setup & Installation](#setup--installation)
 - [ETL Pipeline](#etl-pipeline)
 - [Data Warehouse Schema](#data-warehouse-schema)
+- [Discord Bot](#discord-bot)
 - [Usage](#usage)
 - [Development](#development)
 
@@ -214,6 +215,8 @@ This project provides comprehensive analytics for medical appointment scheduling
 | **DB Admin** | Adminer | Web-based DB management |
 | **Search/AI** | SearxNG | Meta search for data enrichment |
 | **Visualization** | Power BI | Dashboards and reporting |
+| **Chat Interface** | Discord.js | Bot for webhook interactions |
+| **Tunneling** | ngrok | Expose local webhooks to Discord |
 | **Development** | Claude Code | AI-assisted development |
 
 ---
@@ -302,6 +305,12 @@ cp .env.example .env
 | `POSTGRES_PORT` | 5432 | Database port |
 | `N8N_BASIC_AUTH_USER` | username | n8n login user |
 | `N8N_BASIC_AUTH_PASSWORD` | password | n8n login password |
+| `NGROK_AUTHTOKEN` | - | ngrok authentication token |
+| `NGROK_DOMAIN` | - | ngrok domain/subdomain |
+| `N8N_WEBHOOK_URL` | - | Full n8n webhook URL |
+| `DISCORD_TOKEN` | - | Discord bot token |
+| `DISCORD_CLIENT_ID` | - | Discord application ID |
+| `DISCORD_GUILD_ID` | - | Discord server ID |
 
 ### 3. Start Docker Services
 
@@ -579,6 +588,100 @@ Grain: One row per appointment.
 
 ---
 
+## Discord Bot
+
+The project includes a Discord bot that provides a chat interface for interacting with the BI system via n8n webhooks.
+
+### Features
+
+| Command | Description |
+|---------|-------------|
+| `/verify-data` | Returns row counts from all DWH tables |
+
+### Architecture
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Discord    │────▶│   ngrok     │────▶│    n8n      │
+│  Bot        │     │   tunnel    │     │   webhook   │
+└─────────────┘     └─────────────┘     └──────┬──────┘
+                                               │
+                                               ▼
+                                        ┌─────────────┐
+                                        │  PostgreSQL │
+                                        │    DWH      │
+                                        └─────────────┘
+```
+
+### Setup
+
+1. **Create a Discord Application**
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Create a new application
+   - Go to **Bot** → **Add Bot**
+   - Copy the bot token
+
+2. **Get Application IDs**
+   - **Client ID**: Found in **OAuth2** → **General**
+   - **Guild ID**: Enable Developer Mode in Discord, right-click your server → Copy ID
+
+3. **Configure Environment**
+
+   Add to your root `.env`:
+   ```bash
+   DISCORD_TOKEN=your_bot_token
+   DISCORD_CLIENT_ID=your_application_id
+   DISCORD_GUILD_ID=your_server_id
+   N8N_WEBHOOK_URL=https://your-ngrok-url/webhook/your-webhook-id
+   ```
+
+4. **Invite Bot to Server**
+   - Go to **OAuth2** → **URL Generator**
+   - Select scopes: `bot`, `applications.commands`
+   - Select permissions: `Send Messages`, `Use Slash Commands`
+   - Copy and open the generated URL
+
+5. **Start ngrok Tunnel**
+   ```bash
+   ngrok http 5678
+   ```
+   Update `N8N_WEBHOOK_URL` in `.env` with the ngrok URL.
+
+6. **Deploy Commands**
+   ```bash
+   cd discord-bot
+   npm install
+   node deploy-commands.js
+   ```
+
+7. **Start the Bot**
+   ```bash
+   node index.js
+   ```
+
+### Usage
+
+In your Discord server:
+```
+/verify-data
+```
+
+Returns:
+```
+agg_daily: 3653
+agg_monthly: 120
+agg_yearly: 10
+dim_age_group: 16
+dim_date: 4383
+dim_insurance: 5
+dim_patient: 1000
+dim_status: 3
+dim_time: 96
+fact_appointment: 50000
+```
+
+---
+
 ## Usage
 
 ### Power BI Connection
@@ -630,6 +733,7 @@ bi_project/
 ├── .env.example            # Environment template
 ├── .gitignore
 ├── .gitmodules             # SearxNG submodule
+├── .mcp.json               # MCP server configuration
 ├── CLAUDE.md               # Claude Code context
 ├── README.md               # This file
 ├── docker-compose.yml      # Main services
@@ -638,11 +742,18 @@ bi_project/
 │   ├── appointments.csv    # Raw appointment data
 │   ├── patients.csv        # Raw patient data
 │   └── slots.csv           # Raw slot data
-├── local-files/
-│   └── init.sql            # (deprecated - schema in ETL)
+├── discord-bot/            # Discord bot interface
+│   ├── index.js            # Bot main entry point
+│   ├── deploy-commands.js  # Slash command registration
+│   └── package.json        # Node.js dependencies
 ├── n8n/
 │   └── workflows/
-│       └── etl_medical_appointments.json
+│       └── ETL Medical Appointments.json
+├── powerbi-mcp-server/     # Power BI MCP integration
+│   └── extension/
+│       └── server/
+│           └── powerbi-modeling-mcp.exe
+├── power_bi.pbix           # Power BI report file
 └── searxng-docker/         # SearxNG submodule
 ```
 

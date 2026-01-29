@@ -21,12 +21,12 @@ Medical Appointments BI Solution - a full-stack Business Intelligence system for
 │   n8n ETL   │────▶│  PostgreSQL │◀────│  Power BI   │
 │  :5678      │     │  (Star)     │     │  (Client)   │
 └──────┬──────┘     └─────────────┘     └─────────────┘
-       │
-       ▼
-┌─────────────┐
-│  SearxNG    │  (AI context enrichment)
-│  :8080      │
-└─────────────┘
+       │                   ▲
+       ▼                   │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  SearxNG    │     │   ngrok     │◀────│  Discord    │
+│  :8080      │     │  (tunnel)   │     │    Bot      │
+└─────────────┘     └─────────────┘     └─────────────┘
 ```
 
 ## Databases
@@ -54,9 +54,20 @@ Main stack (`docker-compose.yml`):
 
 ## Environment
 
-Credentials in `.env` (copy from `.env.example`):
+All credentials centralized in root `.env` (copy from `.env.example`):
+
+**Database:**
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`
+
+**n8n:**
 - `N8N_BASIC_AUTH_USER`, `N8N_BASIC_AUTH_PASSWORD`
+- `N8N_WEBHOOK_URL` (full webhook URL for Discord integration)
+
+**ngrok:**
+- `NGROK_AUTHTOKEN`, `NGROK_DOMAIN`
+
+**Discord Bot:**
+- `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`
 
 ## Common Commands
 
@@ -75,6 +86,12 @@ docker compose config -q
 ## Key Paths
 
 - `data/`: Source CSV files (patients, slots, appointments)
-- `n8n/workflows/etl_medical_appointments.json`: ETL workflow
-- `.env`: Environment variables (git-ignored)
+- `n8n/workflows/ETL Medical Appointments.json`: ETL workflow
+- `discord-bot/`: Discord bot (uses parent `.env`)
+- `powerbi-mcp-server/`: Power BI MCP integration
+- `.env`: All environment variables (git-ignored)
 - `searxng-docker/`: SearxNG git submodule
+
+## Discord Bot Commands
+
+- `/verify-data`: Returns DWH table row counts via n8n webhook

@@ -1,7 +1,8 @@
-require('dotenv').config();
+// Load environment from parent directory's .env file
+require('dotenv').config({ path: require('path').resolve(__dirname, '..', '.env') });
+
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds],
@@ -18,22 +19,31 @@ client.login(process.env.DISCORD_TOKEN);
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
-
     if (interaction.commandName === 'verify-data') {
         await interaction.deferReply({ ephemeral: true });
 
-        const res = await fetch('https://unsocialised-sweetless-journee.ngrok-free.dev/webhook/346ac09a-5cbe-4970-8a7b-6765876ff5da', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-        });
-
-        const data = await res.json();
-        const reply = data.data.map(item => `${item.tbl}: ${item.cnt}`).join('\n');
-
-        if (!res.ok) {
-            return interaction.editReply('Failed');
+        const webhookUrl = process.env.N8N_WEBHOOK_URL;
+        if (!webhookUrl) {
+            return interaction.editReply('Error: N8N_WEBHOOK_URL not configured');
         }
 
-        await interaction.editReply(reply);
+        try {
+            const res = await fetch(webhookUrl, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            if (!res.ok) {
+                return interaction.editReply('Failed to fetch data from webhook');
+            }
+
+            const data = await res.json();
+            const reply = data.data.map(item => `${item.tbl}: ${item.cnt}`).join('\n');
+
+            await interaction.editReply(reply);
+        } catch (error) {
+            console.error('Webhook error:', error);
+            await interaction.editReply('Error connecting to webhook');
+        }
     }
 });
