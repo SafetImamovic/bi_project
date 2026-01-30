@@ -8,6 +8,14 @@ const commands = [
         name: 'verify-data',
         description: 'Verify ETL data counts via n8n webhook',
     },
+    {
+        name: 'insurance-report',
+        description: 'Get insurance providers report with rankings and analytics',
+    },
+    {
+        name: 'top-insurers',
+        description: 'Show top 3 insurance providers by usage',
+    },
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
