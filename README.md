@@ -98,16 +98,6 @@ This project provides comprehensive analytics for medical appointment scheduling
 
 ## Key Metrics & KPIs
 
-### Operational Efficiency
-
-| KPI | Description | Formula |
-|-----|-------------|---------|
-| **Slot Utilization Rate** | % of available slots that result in completed appointments | `completed / total_slots × 100` |
-| **Patient Throughput** | Appointments completed per day/hour | `COUNT(completed) GROUP BY date/hour` |
-| **Average Appointment Duration** | Mean time spent per appointment | `AVG(appointment_duration_min)` |
-| **On-Time Start Rate** | % of appointments starting within 5 min of scheduled time | `on_time_starts / total × 100` |
-| **Overbooking Efficiency** | Optimal overbooking rate to maximize utilization | Model based on no-show patterns |
-
 ### Patient Experience
 
 | KPI | Description | Formula |
@@ -142,8 +132,6 @@ This project provides comprehensive analytics for medical appointment scheduling
 |-----|-------------|--------------|
 | **Peak Hours** | Hours with highest appointment volume | Staff scheduling |
 | **Day-of-Week Trends** | Attendance/no-show patterns by weekday | Optimize weekly schedules |
-| **Seasonal Patterns** | Monthly/quarterly volume trends | Capacity planning |
-| **Morning vs Afternoon** | Performance comparison by day period | Slot allocation strategy |
 
 ---
 
