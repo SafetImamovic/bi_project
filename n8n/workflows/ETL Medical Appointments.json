@@ -2,14 +2,140 @@
   "name": "ETL Medical Appointments",
   "nodes": [
     {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT 'dim_date' AS tbl, COUNT(*) AS cnt FROM dim_date\nUNION ALL SELECT 'dim_time', COUNT(*) FROM dim_time\nUNION ALL SELECT 'dim_status', COUNT(*) FROM dim_status\nUNION ALL SELECT 'dim_age_group', COUNT(*) FROM dim_age_group\nUNION ALL SELECT 'dim_insurance', COUNT(*) FROM dim_insurance\nUNION ALL SELECT 'dim_patient', COUNT(*) FROM dim_patient\nUNION ALL SELECT 'fact_appointment', COUNT(*) FROM fact_appointment\nUNION ALL SELECT 'agg_daily', COUNT(*) FROM agg_daily\nUNION ALL SELECT 'agg_monthly', COUNT(*) FROM agg_monthly\nUNION ALL SELECT 'agg_yearly', COUNT(*) FROM agg_yearly\nORDER BY tbl;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        112,
+        880
+      ],
+      "id": "8de0659b-0ebd-49f5-82ee-da3991076a2a",
+      "name": "8. Verify Counts",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "346ac09a-5cbe-4970-8a7b-6765876ff5da",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        976
+      ],
+      "id": "8c34829c-337d-401e-9107-0770384ac9fb",
+      "name": "Webhook",
+      "webhookId": "346ac09a-5cbe-4970-8a7b-6765876ff5da"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1072,
+        976
+      ],
+      "id": "75b51ac6-136d-483e-a661-17e8956acd36",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM fact_appointment LIMIT 10;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        112,
+        1072
+      ],
+      "id": "a527dc35-435d-4e1c-899d-3cb9582a8bd3",
+      "name": "8. Verify Counts1",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        656,
+        976
+      ],
+      "id": "ecef1215-a5fc-456a-9a51-cadc2d00db71",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        320,
+        880
+      ],
+      "id": "80bbda81-8fe9-4c69-a5e4-0669b64dc757",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        320,
+        1072
+      ],
+      "id": "8906a1b7-0438-442e-a104-0f52b35e2e80",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get input JSON (assuming it's an array)\nconst app_data = $input.all();\n\n// Columns you want in the table\nconst columns = [\n  \"appointment_id\",\n  \"slot_id\",\n  \"appointment_date_key\",\n  \"appointment_time_key\",\n  \"patient_key\",\n  \"status_key\",\n  \"age_group_key\",\n  \"scheduling_lead_days\",\n  \"appointment_duration_min\",\n  \"waiting_time_min\",\n  \"age_at_appointment\",\n  \"is_same_day_booking\",\n  \"arrived_early\",\n  \"arrived_late\"\n];\n\n// Function to safely get value or empty string\nconst getVal = (item, key) => item[key] !== null && item[key] !== undefined ? item[key] : \"\";\n\n// Build Markdown table\nlet table = \"```\\n| \" + columns.join(\" | \") + \" |\\n\";\ntable += \"| \" + columns.map(() => \"---\").join(\" | \") + \" |\\n\";\n\napp_data.forEach(item => {\n  const row = columns.map(col => getVal(item, col));\n  table += \"| \" + row.join(\" | \") + \" |\\n\";\n});\n\ntable += \"\\n```\"\n\n// Return table as JSON for webhook\nreturn [{ json: { text: table } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        976
+      ],
+      "id": "a87aed19-089e-4dc4-b1e0-baf1868666fc",
+      "name": "Code in JavaScript"
+    },
+    {
       "parameters": {},
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -1040,
-        336
+        -1024,
+        368
       ],
-      "id": "3358ef65-495b-4219-9d20-53fb7efd1d31",
+      "id": "89a2f82c-5b06-439c-b719-4a56c45fedb2",
       "name": "Start ETL"
     },
     {
@@ -21,10 +147,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -816,
-        336
+        -800,
+        368
       ],
-      "id": "12921c43-604c-4426-be4c-3d65a3baeaa7",
+      "id": "1c4b929c-62b5-4310-8f70-19cddd8e1e79",
       "name": "1. Create STG Tables",
       "credentials": {
         "postgres": {
@@ -42,10 +168,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -592,
-        336
+        -576,
+        368
       ],
-      "id": "f9136774-68f0-40c9-aa19-2acb6eff1f83",
+      "id": "076d0144-a001-41b9-b569-dc36f2e6a50a",
       "name": "2. Load CSVs to STG",
       "credentials": {
         "postgres": {
@@ -57,16 +183,37 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- =============================================\n-- DWH: Create Schema\n-- =============================================\nDROP TABLE IF EXISTS fact_appointment CASCADE;\nDROP TABLE IF EXISTS dim_patient CASCADE;\nDROP TABLE IF EXISTS dim_insurance CASCADE;\nDROP TABLE IF EXISTS dim_status CASCADE;\nDROP TABLE IF EXISTS dim_age_group CASCADE;\nDROP TABLE IF EXISTS dim_time CASCADE;\nDROP TABLE IF EXISTS dim_date CASCADE;\n\n-- dim_date\nCREATE TABLE dim_date (\n    date_key        INTEGER PRIMARY KEY,\n    full_date       DATE NOT NULL UNIQUE,\n    day_of_week     SMALLINT NOT NULL,\n    day_name        VARCHAR(10) NOT NULL,\n    day_of_month    SMALLINT NOT NULL,\n    day_of_year     SMALLINT NOT NULL,\n    week_of_year    SMALLINT NOT NULL,\n    month_num       SMALLINT NOT NULL,\n    month_name      VARCHAR(10) NOT NULL,\n    quarter         SMALLINT NOT NULL,\n    year            SMALLINT NOT NULL,\n    is_weekend      BOOLEAN NOT NULL,\n    is_weekday      BOOLEAN NOT NULL\n);\n\n-- dim_time\nCREATE TABLE dim_time (\n    time_key         INTEGER PRIMARY KEY,\n    full_time        TIME NOT NULL UNIQUE,\n    hour_24          SMALLINT NOT NULL,\n    hour_12          SMALLINT NOT NULL,\n    minute           SMALLINT NOT NULL,\n    period           VARCHAR(2) NOT NULL,\n    time_slot        VARCHAR(15) NOT NULL,\n    day_period       VARCHAR(15) NOT NULL,\n    is_business_hour BOOLEAN NOT NULL\n);\n\n-- dim_status\nCREATE TABLE dim_status (\n    status_key      SERIAL PRIMARY KEY,\n    status_code     VARCHAR(20) NOT NULL UNIQUE,\n    status_name     VARCHAR(30) NOT NULL,\n    status_category VARCHAR(20) NOT NULL,\n    is_completed    BOOLEAN NOT NULL,\n    is_no_show      BOOLEAN NOT NULL\n);\n\n-- dim_age_group\nCREATE TABLE dim_age_group (\n    age_group_key   SERIAL PRIMARY KEY,\n    age_group_code  VARCHAR(10) NOT NULL UNIQUE,\n    age_min         SMALLINT NOT NULL,\n    age_max         SMALLINT NOT NULL,\n    age_bracket     VARCHAR(20) NOT NULL,\n    sort_order      SMALLINT NOT NULL\n);\n\n-- dim_insurance\nCREATE TABLE dim_insurance (\n    insurance_key   SERIAL PRIMARY KEY,\n    insurance_name  VARCHAR(50) NOT NULL UNIQUE\n);\n\n-- dim_patient\nCREATE TABLE dim_patient (\n    patient_key     SERIAL PRIMARY KEY,\n    patient_id      VARCHAR(10) NOT NULL UNIQUE,\n    patient_name    VARCHAR(60) NOT NULL,\n    sex             VARCHAR(15) NOT NULL,\n    date_of_birth   DATE NOT NULL,\n    insurance_key   INTEGER REFERENCES dim_insurance(insurance_key),\n    current_age     SMALLINT\n);\n\n-- fact_appointment\nCREATE TABLE fact_appointment (\n    appointment_key          SERIAL PRIMARY KEY,\n    appointment_id           VARCHAR(10) NOT NULL,\n    slot_id                  VARCHAR(10) NOT NULL,\n    appointment_date_key     INTEGER NOT NULL REFERENCES dim_date(date_key),\n    scheduling_date_key      INTEGER NOT NULL REFERENCES dim_date(date_key),\n    appointment_time_key     INTEGER NOT NULL REFERENCES dim_time(time_key),\n    patient_key              INTEGER REFERENCES dim_patient(patient_key),\n    status_key               INTEGER NOT NULL REFERENCES dim_status(status_key),\n    age_group_key            INTEGER REFERENCES dim_age_group(age_group_key),\n    scheduling_lead_days     SMALLINT,\n    appointment_duration_min NUMERIC(5,2),\n    waiting_time_min         NUMERIC(5,2),\n    age_at_appointment       SMALLINT,\n    is_same_day_booking      BOOLEAN,\n    arrived_early            BOOLEAN,\n    arrived_late             BOOLEAN\n);\n\nCREATE INDEX idx_fact_appt_date ON fact_appointment(appointment_date_key);\nCREATE INDEX idx_fact_sched_date ON fact_appointment(scheduling_date_key);\nCREATE INDEX idx_fact_patient ON fact_appointment(patient_key);\nCREATE INDEX idx_fact_status ON fact_appointment(status_key);",
+        "query": "-- =============================================\n-- STAGING: Data Cleaning & Normalization\n-- =============================================\n\n-- Clean and normalize patients\nUPDATE stg_patients SET\n    patient_id = TRIM(patient_id),\n    name = COALESCE(NULLIF(TRIM(name), ''), 'Unknown'),\n    sex = COALESCE(NULLIF(TRIM(UPPER(sex)), ''), 'UNKNOWN'),\n    dob = NULLIF(TRIM(dob), ''),\n    insurance = COALESCE(NULLIF(TRIM(insurance), ''), 'Unknown');\n\n-- Clean and normalize appointments\nUPDATE stg_appointments SET\n    appointment_id = TRIM(appointment_id),\n    slot_id = TRIM(slot_id),\n    patient_id = TRIM(patient_id),\n    status = COALESCE(NULLIF(TRIM(LOWER(status)), ''), 'unknown'),\n    age_group = COALESCE(NULLIF(TRIM(age_group), ''), 'Unknown'),\n    scheduling_date = NULLIF(TRIM(scheduling_date), ''),\n    appointment_date = NULLIF(TRIM(appointment_date), ''),\n    appointment_time = NULLIF(TRIM(appointment_time), ''),\n    check_in_time = NULLIF(TRIM(check_in_time), ''),\n    scheduling_interval = NULLIF(TRIM(scheduling_interval), ''),\n    appointment_duration = NULLIF(TRIM(appointment_duration), ''),\n    waiting_time = NULLIF(TRIM(waiting_time), ''),\n    age = NULLIF(TRIM(age), '');\n\n-- Deduplication: Remove duplicate appointments (keep first by load_ts)\nDELETE FROM stg_appointments a\nUSING stg_appointments b\nWHERE a.load_ts > b.load_ts\n  AND a.appointment_id = b.appointment_id;\n\n-- Deduplication: Remove duplicate patients\nDELETE FROM stg_patients a\nUSING stg_patients b\nWHERE a.load_ts > b.load_ts\n  AND a.patient_id = b.patient_id;\n\n-- Data Validation: Log counts\nSELECT \n    'stg_patients' AS table_name, COUNT(*) AS row_count FROM stg_patients\nUNION ALL\nSELECT 'stg_appointments', COUNT(*) FROM stg_appointments\nUNION ALL\nSELECT 'stg_slots', COUNT(*) FROM stg_slots;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -368,
-        336
+        -352,
+        368
       ],
-      "id": "168da0f1-3d18-4871-82cc-1e5e69484b23",
+      "id": "adaf8aa4-4fa2-4e59-90f9-bf68cca5eea3",
+      "name": "2b. Clean & Normalize STG",
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- DWH: Create Schema with Unknown Members Support\n-- =============================================\nDROP TABLE IF EXISTS agg_yearly CASCADE;\nDROP TABLE IF EXISTS agg_monthly CASCADE;\nDROP TABLE IF EXISTS agg_daily CASCADE;\nDROP TABLE IF EXISTS fact_appointment CASCADE;\nDROP TABLE IF EXISTS dim_patient CASCADE;\nDROP TABLE IF EXISTS dim_insurance CASCADE;\nDROP TABLE IF EXISTS dim_status CASCADE;\nDROP TABLE IF EXISTS dim_age_group CASCADE;\nDROP TABLE IF EXISTS dim_time CASCADE;\nDROP TABLE IF EXISTS dim_date CASCADE;\n\n-- dim_date (includes Unknown member)\nCREATE TABLE dim_date (\n    date_key        INTEGER PRIMARY KEY,\n    full_date       DATE UNIQUE,\n    day_of_week     SMALLINT NOT NULL DEFAULT 0,\n    day_name        VARCHAR(10) NOT NULL DEFAULT 'Unknown',\n    day_of_month    SMALLINT NOT NULL DEFAULT 0,\n    day_of_year     SMALLINT NOT NULL DEFAULT 0,\n    week_of_year    SMALLINT NOT NULL DEFAULT 0,\n    month_num       SMALLINT NOT NULL DEFAULT 0,\n    month_name      VARCHAR(10) NOT NULL DEFAULT 'Unknown',\n    quarter         SMALLINT NOT NULL DEFAULT 0,\n    year            SMALLINT NOT NULL DEFAULT 0,\n    is_weekend      BOOLEAN NOT NULL DEFAULT FALSE,\n    is_weekday      BOOLEAN NOT NULL DEFAULT FALSE\n);\n\n-- dim_time (includes Unknown member)\nCREATE TABLE dim_time (\n    time_key         INTEGER PRIMARY KEY,\n    full_time        TIME UNIQUE,\n    hour_24          SMALLINT NOT NULL DEFAULT 0,\n    hour_12          SMALLINT NOT NULL DEFAULT 0,\n    minute           SMALLINT NOT NULL DEFAULT 0,\n    period           VARCHAR(2) NOT NULL DEFAULT 'NA',\n    time_slot        VARCHAR(15) NOT NULL DEFAULT 'Unknown',\n    day_period       VARCHAR(15) NOT NULL DEFAULT 'Unknown',\n    is_business_hour BOOLEAN NOT NULL DEFAULT FALSE\n);\n\n-- dim_status (includes Unknown member)\nCREATE TABLE dim_status (\n    status_key      INTEGER PRIMARY KEY,\n    status_code     VARCHAR(20) NOT NULL UNIQUE,\n    status_name     VARCHAR(30) NOT NULL,\n    status_category VARCHAR(20) NOT NULL,\n    is_completed    BOOLEAN NOT NULL DEFAULT FALSE,\n    is_no_show      BOOLEAN NOT NULL DEFAULT FALSE\n);\n\n-- dim_age_group (includes Unknown member)\nCREATE TABLE dim_age_group (\n    age_group_key   INTEGER PRIMARY KEY,\n    age_group_code  VARCHAR(10) NOT NULL UNIQUE,\n    age_min         SMALLINT NOT NULL DEFAULT 0,\n    age_max         SMALLINT NOT NULL DEFAULT 999,\n    age_bracket     VARCHAR(20) NOT NULL DEFAULT 'Unknown',\n    sort_order      SMALLINT NOT NULL DEFAULT 0\n);\n\n-- dim_insurance (includes Unknown member)\nCREATE TABLE dim_insurance (\n    insurance_key   INTEGER PRIMARY KEY,\n    insurance_name  VARCHAR(50) NOT NULL UNIQUE\n);\n\n-- dim_patient (includes Unknown member)\nCREATE TABLE dim_patient (\n    patient_key     INTEGER PRIMARY KEY,\n    patient_id      VARCHAR(10) NOT NULL UNIQUE,\n    patient_name    VARCHAR(60) NOT NULL DEFAULT 'Unknown',\n    sex             VARCHAR(15) NOT NULL DEFAULT 'Unknown',\n    date_of_birth   DATE,\n    insurance_key   INTEGER NOT NULL REFERENCES dim_insurance(insurance_key) DEFAULT -1,\n    current_age     SMALLINT NOT NULL DEFAULT 0\n);\n\n-- fact_appointment (NO NULLs in FKs - all reference dimension members)\nCREATE TABLE fact_appointment (\n    appointment_key          SERIAL PRIMARY KEY,\n    appointment_id           VARCHAR(10) NOT NULL,\n    slot_id                  VARCHAR(10) NOT NULL DEFAULT 'UNKNOWN',\n    appointment_date_key     INTEGER NOT NULL REFERENCES dim_date(date_key) DEFAULT -1,\n    scheduling_date_key      INTEGER NOT NULL REFERENCES dim_date(date_key) DEFAULT -1,\n    appointment_time_key     INTEGER NOT NULL REFERENCES dim_time(time_key) DEFAULT -1,\n    patient_key              INTEGER NOT NULL REFERENCES dim_patient(patient_key) DEFAULT -1,\n    status_key               INTEGER NOT NULL REFERENCES dim_status(status_key) DEFAULT -1,\n    age_group_key            INTEGER NOT NULL REFERENCES dim_age_group(age_group_key) DEFAULT -1,\n    -- Measures with defaults (no NULLs)\n    scheduling_lead_days     SMALLINT NOT NULL DEFAULT 0,\n    appointment_duration_min NUMERIC(5,2) NOT NULL DEFAULT 0,\n    waiting_time_min         NUMERIC(5,2) NOT NULL DEFAULT 0,\n    age_at_appointment       SMALLINT NOT NULL DEFAULT 0,\n    is_same_day_booking      BOOLEAN NOT NULL DEFAULT FALSE,\n    arrived_early            BOOLEAN NOT NULL DEFAULT FALSE,\n    arrived_late             BOOLEAN NOT NULL DEFAULT FALSE\n);\n\nCREATE INDEX idx_fact_appt_date ON fact_appointment(appointment_date_key);\nCREATE INDEX idx_fact_sched_date ON fact_appointment(scheduling_date_key);\nCREATE INDEX idx_fact_patient ON fact_appointment(patient_key);\nCREATE INDEX idx_fact_status ON fact_appointment(status_key);\nCREATE INDEX idx_fact_age_group ON fact_appointment(age_group_key);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -128,
+        368
+      ],
+      "id": "b6c5c9cf-4445-479b-987c-4d648e343d17",
       "name": "3. Create DWH Schema",
       "credentials": {
         "postgres": {
@@ -78,17 +225,18 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- =============================================\n-- DWH: Populate dim_date (2014-2025)\n-- =============================================\nINSERT INTO dim_date\nSELECT \n    TO_CHAR(d, 'YYYYMMDD')::INT,\n    d,\n    EXTRACT(ISODOW FROM d)::SMALLINT,\n    TRIM(TO_CHAR(d, 'Day')),\n    EXTRACT(DAY FROM d)::SMALLINT,\n    EXTRACT(DOY FROM d)::SMALLINT,\n    EXTRACT(WEEK FROM d)::SMALLINT,\n    EXTRACT(MONTH FROM d)::SMALLINT,\n    TRIM(TO_CHAR(d, 'Month')),\n    EXTRACT(QUARTER FROM d)::SMALLINT,\n    EXTRACT(YEAR FROM d)::SMALLINT,\n    EXTRACT(ISODOW FROM d) IN (6,7),\n    EXTRACT(ISODOW FROM d) NOT IN (6,7)\nFROM generate_series('2014-01-01'::DATE, '2025-12-31'::DATE, '1 day') d;",
+        "query": "-- =============================================\n-- DWH: Insert Unknown Date Member (key = -1)\n-- =============================================\nINSERT INTO dim_date (date_key, full_date, day_of_week, day_name, day_of_month, \n    day_of_year, week_of_year, month_num, month_name, quarter, year, is_weekend, is_weekday)\nVALUES (-1, NULL, 0, 'Unknown', 0, 0, 0, 0, 'Unknown', 0, 0, FALSE, FALSE);\n\n-- =============================================\n-- DWH: Populate dim_date (2014-2025)\n-- =============================================\nINSERT INTO dim_date\nSELECT \n    TO_CHAR(d, 'YYYYMMDD')::INT,\n    d,\n    EXTRACT(ISODOW FROM d)::SMALLINT,\n    TRIM(TO_CHAR(d, 'Day')),\n    EXTRACT(DAY FROM d)::SMALLINT,\n    EXTRACT(DOY FROM d)::SMALLINT,\n    EXTRACT(WEEK FROM d)::SMALLINT,\n    EXTRACT(MONTH FROM d)::SMALLINT,\n    TRIM(TO_CHAR(d, 'Month')),\n    EXTRACT(QUARTER FROM d)::SMALLINT,\n    EXTRACT(YEAR FROM d)::SMALLINT,\n    EXTRACT(ISODOW FROM d) IN (6,7),\n    EXTRACT(ISODOW FROM d) NOT IN (6,7)\nFROM generate_series('2014-01-01'::DATE, '2025-12-31'::DATE, '1 day') d;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -144,
-        16
+        112,
+        48
       ],
-      "id": "f78c2977-f49a-427b-a536-a6a6f0840f38",
+      "id": "01804aeb-30b8-44eb-8062-99df56cad77c",
       "name": "4a. dim_date",
+      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "y9M2F5HJ6KkJLyVa",
@@ -99,17 +247,18 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO dim_time (\n    time_key, full_time, hour_24, hour_12, minute, period,\n    time_slot, day_period, is_business_hour\n)\nSELECT \n    (EXTRACT(HOUR FROM t)*100 + EXTRACT(MINUTE FROM t))::INT AS time_key,\n    t::TIME AS full_time,\n    EXTRACT(HOUR FROM t)::SMALLINT AS hour_24,\n    CASE \n        WHEN EXTRACT(HOUR FROM t)=0 THEN 12\n        WHEN EXTRACT(HOUR FROM t)>12 THEN EXTRACT(HOUR FROM t)-12\n        ELSE EXTRACT(HOUR FROM t)\n    END::SMALLINT AS hour_12,\n    EXTRACT(MINUTE FROM t)::SMALLINT AS minute,\n    CASE WHEN EXTRACT(HOUR FROM t)<12 THEN 'AM' ELSE 'PM' END AS period,\n    TO_CHAR(t,'HH24:MI')||'-'||TO_CHAR(t + INTERVAL '15 min','HH24:MI') AS time_slot,\n    CASE \n        WHEN EXTRACT(HOUR FROM t) BETWEEN 6 AND 11 THEN 'Morning'\n        WHEN EXTRACT(HOUR FROM t) BETWEEN 12 AND 17 THEN 'Afternoon'\n        ELSE 'Evening'\n    END AS day_period,\n    EXTRACT(HOUR FROM t) BETWEEN 8 AND 17 AS is_business_hour\nFROM generate_series(\n    '2026-01-27 00:00:00'::timestamp,\n    '2026-01-27 23:45:00'::timestamp,\n    '15 minutes'::interval\n) t;\n",
+        "query": "-- =============================================\n-- DWH: Insert Unknown Time Member (key = -1)\n-- =============================================\nINSERT INTO dim_time (time_key, full_time, hour_24, hour_12, minute, period, \n    time_slot, day_period, is_business_hour)\nVALUES (-1, NULL, 0, 0, 0, 'NA', 'Unknown', 'Unknown', FALSE);\n\n-- =============================================\n-- DWH: Populate dim_time (15-min intervals)\n-- =============================================\nINSERT INTO dim_time (\n    time_key, full_time, hour_24, hour_12, minute, period,\n    time_slot, day_period, is_business_hour\n)\nSELECT \n    (EXTRACT(HOUR FROM t)*100 + EXTRACT(MINUTE FROM t))::INT AS time_key,\n    t::TIME AS full_time,\n    EXTRACT(HOUR FROM t)::SMALLINT AS hour_24,\n    CASE \n        WHEN EXTRACT(HOUR FROM t)=0 THEN 12\n        WHEN EXTRACT(HOUR FROM t)>12 THEN EXTRACT(HOUR FROM t)-12\n        ELSE EXTRACT(HOUR FROM t)\n    END::SMALLINT AS hour_12,\n    EXTRACT(MINUTE FROM t)::SMALLINT AS minute,\n    CASE WHEN EXTRACT(HOUR FROM t)<12 THEN 'AM' ELSE 'PM' END AS period,\n    TO_CHAR(t,'HH24:MI')||'-'||TO_CHAR(t + INTERVAL '15 min','HH24:MI') AS time_slot,\n    CASE \n        WHEN EXTRACT(HOUR FROM t) BETWEEN 6 AND 11 THEN 'Morning'\n        WHEN EXTRACT(HOUR FROM t) BETWEEN 12 AND 17 THEN 'Afternoon'\n        ELSE 'Evening'\n    END AS day_period,\n    EXTRACT(HOUR FROM t) BETWEEN 8 AND 17 AS is_business_hour\nFROM generate_series(\n    '2000-01-01 00:00:00'::timestamp,\n    '2000-01-01 23:45:00'::timestamp,\n    '15 minutes'::interval\n) t;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -144,
-        208
+        112,
+        240
       ],
-      "id": "159e96e6-8814-482d-a930-c515f53739f3",
+      "id": "e01a2a8a-a547-451c-8d7a-8073ac7710e9",
       "name": "4b. dim_time",
+      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "y9M2F5HJ6KkJLyVa",
@@ -120,17 +269,18 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO dim_status (status_code, status_name, status_category, is_completed, is_no_show)\nSELECT \n    status AS status_code,\n    INITCAP(status) AS status_name,  -- Capitalize for nicer display\n    CASE \n        WHEN LOWER(status) IN ('completed', 'attended') THEN 'attended'\n        WHEN LOWER(status) IN ('no-show', 'did not attend', 'missed') THEN 'missed'\n        ELSE 'pending'\n    END AS status_category,\n    CASE \n        WHEN LOWER(status) = 'completed' THEN TRUE\n        ELSE FALSE\n    END AS is_completed,\n    CASE \n        WHEN LOWER(status) IN ('no-show', 'did not attend') THEN TRUE\n        ELSE FALSE\n    END AS is_no_show\nFROM stg_appointments\nWHERE status IS NOT NULL\nON CONFLICT (status_code) DO NOTHING;  -- avoid duplicates if rerun\n",
+        "query": "-- =============================================\n-- DWH: Insert Unknown Status Member (key = -1)\n-- =============================================\nINSERT INTO dim_status (status_key, status_code, status_name, status_category, is_completed, is_no_show)\nVALUES (-1, 'unknown', 'Unknown', 'unknown', FALSE, FALSE);\n\n-- =============================================\n-- DWH: Populate dim_status from STG\n-- =============================================\nINSERT INTO dim_status (status_key, status_code, status_name, status_category, is_completed, is_no_show)\nSELECT \n    ROW_NUMBER() OVER (ORDER BY status)::INT AS status_key,\n    LOWER(status) AS status_code,\n    INITCAP(status) AS status_name,\n    CASE \n        WHEN LOWER(status) IN ('completed', 'attended') THEN 'attended'\n        WHEN LOWER(status) IN ('no-show', 'did not attend', 'missed') THEN 'missed'\n        WHEN LOWER(status) IN ('cancelled', 'canceled') THEN 'cancelled'\n        ELSE 'pending'\n    END AS status_category,\n    LOWER(status) IN ('completed', 'attended') AS is_completed,\n    LOWER(status) IN ('no-show', 'did not attend', 'missed') AS is_no_show\nFROM (SELECT DISTINCT status FROM stg_appointments WHERE status IS NOT NULL AND LOWER(status) != 'unknown') sub\nON CONFLICT (status_code) DO NOTHING;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -144,
-        400
+        112,
+        432
       ],
-      "id": "e4c81cbf-25c4-4000-b407-6a37601f3736",
+      "id": "ee45a262-93f4-4e0b-94c6-b4c7a20cc0c1",
       "name": "4c. dim_status",
+      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "y9M2F5HJ6KkJLyVa",
@@ -141,17 +291,18 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- =============================================\n-- DWH: Populate dim_age_group (static)\n-- =============================================\nINSERT INTO dim_age_group (age_group_code, age_min, age_max, age_bracket, sort_order) VALUES\n    ('15-19', 15, 19, 'Young Adult', 1),\n    ('20-24', 20, 24, 'Young Adult', 2),\n    ('25-29', 25, 29, 'Adult', 3),\n    ('30-34', 30, 34, 'Adult', 4),\n    ('35-39', 35, 39, 'Adult', 5),\n    ('40-44', 40, 44, 'Adult', 6),\n    ('45-49', 45, 49, 'Middle Age', 7),\n    ('50-54', 50, 54, 'Middle Age', 8),\n    ('55-59', 55, 59, 'Middle Age', 9),\n    ('60-64', 60, 64, 'Senior', 10),\n    ('65-69', 65, 69, 'Senior', 11),\n    ('70-74', 70, 74, 'Senior', 12),\n    ('75-79', 75, 79, 'Senior', 13),\n    ('80-84', 80, 84, 'Elderly', 14),\n    ('85-89', 85, 89, 'Elderly', 15),\n    ('90+',   90, 120,'Elderly', 16);",
+        "query": "-- =============================================\n-- DWH: Insert Unknown Age Group Member (key = -1)\n-- =============================================\nINSERT INTO dim_age_group (age_group_key, age_group_code, age_min, age_max, age_bracket, sort_order)\nVALUES (-1, 'Unknown', 0, 999, 'Unknown', 0);\n\n-- =============================================\n-- DWH: Populate dim_age_group (static lookup)\n-- =============================================\nINSERT INTO dim_age_group (age_group_key, age_group_code, age_min, age_max, age_bracket, sort_order) VALUES\n    (1, '15-19', 15, 19, 'Young Adult', 1),\n    (2, '20-24', 20, 24, 'Young Adult', 2),\n    (3, '25-29', 25, 29, 'Adult', 3),\n    (4, '30-34', 30, 34, 'Adult', 4),\n    (5, '35-39', 35, 39, 'Adult', 5),\n    (6, '40-44', 40, 44, 'Adult', 6),\n    (7, '45-49', 45, 49, 'Middle Age', 7),\n    (8, '50-54', 50, 54, 'Middle Age', 8),\n    (9, '55-59', 55, 59, 'Middle Age', 9),\n    (10, '60-64', 60, 64, 'Senior', 10),\n    (11, '65-69', 65, 69, 'Senior', 11),\n    (12, '70-74', 70, 74, 'Senior', 12),\n    (13, '75-79', 75, 79, 'Senior', 13),\n    (14, '80-84', 80, 84, 'Elderly', 14),\n    (15, '85-89', 85, 89, 'Elderly', 15),\n    (16, '90+',   90, 120,'Elderly', 16);",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -144,
-        592
+        112,
+        624
       ],
-      "id": "e8f78879-fdd1-4653-9ae2-7de923202536",
+      "id": "c63a7a06-b28a-4797-b004-da525923e872",
       "name": "4d. dim_age_group",
+      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "y9M2F5HJ6KkJLyVa",
@@ -162,105 +313,17 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT DISTINCT insurance FROM stg_patients WHERE insurance IS NOT NULL ORDER BY insurance;",
+        "query": "-- =============================================\n-- DWH: Insert Unknown Insurance Member (key = -1)\n-- =============================================\nINSERT INTO dim_insurance (insurance_key, insurance_name)\nVALUES (-1, 'Unknown');\n\n-- =============================================\n-- DWH: Populate dim_insurance from STG\n-- =============================================\nINSERT INTO dim_insurance (insurance_key, insurance_name)\nSELECT \n    ROW_NUMBER() OVER (ORDER BY insurance)::INT AS insurance_key,\n    insurance AS insurance_name\nFROM (SELECT DISTINCT insurance FROM stg_patients WHERE insurance IS NOT NULL AND insurance != 'Unknown') sub\nON CONFLICT (insurance_name) DO NOTHING;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        304,
-        304
+        560,
+        336
       ],
-      "id": "16cb4559-7c98-458c-a173-c3749621fcea",
-      "name": "5a. Read Insurance from STG",
-      "executeOnce": true,
-      "credentials": {
-        "postgres": {
-          "id": "y9M2F5HJ6KkJLyVa",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "schema": "public",
-        "table": "dim_insurance",
-        "columns": {
-          "0": "i",
-          "1": "n",
-          "2": "s",
-          "3": "u",
-          "4": "r",
-          "5": "a",
-          "6": "n",
-          "7": "c",
-          "8": "e",
-          "9": "_",
-          "10": "n",
-          "11": "a",
-          "12": "m",
-          "13": "e",
-          "mappingMode": "defineBelow",
-          "value": {
-            "insurance_name": "={{ $json.insurance }}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "insurance_key",
-              "displayName": "insurance_key",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": true,
-              "removed": true
-            },
-            {
-              "id": "insurance_name",
-              "displayName": "insurance_name",
-              "required": true,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        528,
-        304
-      ],
-      "id": "0932a1f5-b26b-42da-954a-404f62e0baa0",
-      "name": "5b. Insert dim_insurance",
-      "credentials": {
-        "postgres": {
-          "id": "y9M2F5HJ6KkJLyVa",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "-- Transform and load patients from staging into dim_patient\nINSERT INTO dim_patient (\n    patient_id,\n    patient_name,\n    sex,\n    date_of_birth,\n    insurance_key,\n    current_age\n)\nSELECT\n    sp.patient_id,\n    sp.name,\n    sp.sex,\n    sp.dob::DATE AS date_of_birth,\n    di.insurance_key,\n    EXTRACT(YEAR FROM AGE(CURRENT_DATE, sp.dob::DATE))::SMALLINT AS current_age\nFROM stg_patients sp\nLEFT JOIN dim_insurance di\n    ON di.insurance_name = sp.insurance\nWHERE sp.dob IS NOT NULL;\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        752,
-        304
-      ],
-      "id": "60dc4865-1653-42a5-ad7f-9b96bcf720e0",
-      "name": "6c. Insert dim_patient",
+      "id": "acee8137-90c5-4d54-919b-a0d6435c196c",
+      "name": "5a. dim_insurance",
       "executeOnce": true,
       "alwaysOutputData": true,
       "credentials": {
@@ -273,51 +336,19 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT *\nFROM stg_appointments\n",
+        "query": "-- =============================================\n-- DWH: Insert Unknown Patient Member (key = -1)\n-- =============================================\nINSERT INTO dim_patient (patient_key, patient_id, patient_name, sex, date_of_birth, insurance_key, current_age)\nVALUES (-1, 'UNKNOWN', 'Unknown', 'Unknown', NULL, -1, 0);\n\n-- =============================================\n-- DWH: Populate dim_patient from STG\n-- =============================================\nINSERT INTO dim_patient (\n    patient_key,\n    patient_id,\n    patient_name,\n    sex,\n    date_of_birth,\n    insurance_key,\n    current_age\n)\nSELECT\n    ROW_NUMBER() OVER (ORDER BY sp.patient_id)::INT AS patient_key,\n    sp.patient_id,\n    COALESCE(sp.name, 'Unknown'),\n    COALESCE(sp.sex, 'Unknown'),\n    sp.dob::DATE AS date_of_birth,\n    COALESCE(di.insurance_key, -1) AS insurance_key,\n    COALESCE(EXTRACT(YEAR FROM AGE(CURRENT_DATE, sp.dob::DATE))::SMALLINT, 0) AS current_age\nFROM stg_patients sp\nLEFT JOIN dim_insurance di ON di.insurance_name = sp.insurance\nWHERE sp.patient_id IS NOT NULL AND sp.patient_id != 'UNKNOWN';",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        976,
-        304
-      ],
-      "id": "04f1c13c-8a2d-4366-83eb-bbd24508b59c",
-      "name": "7a. Read Appointments from STG",
-      "credentials": {
-        "postgres": {
-          "id": "y9M2F5HJ6KkJLyVa",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Helper functions\nconst timeToKey = (t) => {\n  if (!t || t.trim() === '') return null;\n  const [h, m] = t.split(':').map(Number);\n  return h * 100 + m;\n};\n\nconst isEarlier = (a, b) => {\n  if (!a || !b) return null;\n  const [ah, am] = a.split(':').map(Number);\n  const [bh, bm] = b.split(':').map(Number);\n  return ah * 60 + am < bh * 60 + bm;\n};\n\nconst isLater = (a, b) => {\n  if (!a || !b) return null;\n  const [ah, am] = a.split(':').map(Number);\n  const [bh, bm] = b.split(':').map(Number);\n  return ah * 60 + am > bh * 60 + bm;\n};\n\n// Helper for SQL-safe values\nconst sqlVal = (v) =>\n  v === null || v === undefined ? 'NULL'\n  : typeof v === 'string' ? `'${v.replace(/'/g, \"''\")}'`\n  : v;\n\n// Build VALUES rows\nconst values = $input.all().map(item => {\n  const j = item.json;\n\n  const apptDateKey = j.appointment_date?.replace(/-/g, '') ?? null;\n  const schedDateKey = j.scheduling_date?.replace(/-/g, '') ?? null;\n\n  return `(\n    ${sqlVal(j.appointment_id)},\n    ${sqlVal(j.slot_id)},\n    ${sqlVal(apptDateKey ? parseInt(apptDateKey) : null)},\n    ${sqlVal(schedDateKey ? parseInt(schedDateKey) : null)},\n    ${sqlVal(timeToKey(j.appointment_time))},\n    (SELECT patient_key FROM dim_patient WHERE patient_id = ${sqlVal(j.patient_id)}),\n    (SELECT status_key FROM dim_status WHERE status_code = ${sqlVal(j.status)}),\n    (SELECT age_group_key FROM dim_age_group WHERE age_group_code = ${sqlVal(j.age_group)}),\n    ${sqlVal(j.scheduling_interval ? parseInt(j.scheduling_interval) : null)},\n    ${sqlVal(j.appointment_duration ? parseFloat(j.appointment_duration) : null)},\n    ${sqlVal(j.waiting_time ? parseFloat(j.waiting_time) : null)},\n    ${sqlVal(j.age ? parseInt(j.age) : null)},\n    ${j.scheduling_date === j.appointment_date},\n    ${sqlVal(isEarlier(j.check_in_time, j.appointment_time))},\n    ${sqlVal(isLater(j.check_in_time, j.appointment_time))}\n  )`;\n}).join(',\\n');\n\n// Final SQL\nconst sql = `\nINSERT INTO fact_appointment (\n  appointment_id,\n  slot_id,\n  appointment_date_key,\n  scheduling_date_key,\n  appointment_time_key,\n  patient_key,\n  status_key,\n  age_group_key,\n  scheduling_lead_days,\n  appointment_duration_min,\n  waiting_time_min,\n  age_at_appointment,\n  is_same_day_booking,\n  arrived_early,\n  arrived_late\n)\nVALUES\n${values};\n`;\n\nreturn [\n  {\n    json: { sql }\n  }\n];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1552,
+        784,
         336
       ],
-      "id": "d39e61a1-77f5-455b-b93e-edd8b911a84b",
-      "name": "7b. Transform Appointments"
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "{{ $json.sql }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        1824,
-        400
-      ],
-      "id": "425eb33f-0745-4d3c-bd41-dbef8e0d6387",
-      "name": "7c. Insert fact_appointment",
+      "id": "a67bbab6-2749-4aa0-bda6-c49c44c711bf",
+      "name": "5b. dim_patient",
+      "executeOnce": true,
+      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "y9M2F5HJ6KkJLyVa",
@@ -328,17 +359,132 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- =============================================\n-- AGGREGATE TABLES: Create schema\n-- =============================================\nDROP TABLE IF EXISTS agg_yearly CASCADE;\nDROP TABLE IF EXISTS agg_monthly CASCADE;\nDROP TABLE IF EXISTS agg_daily CASCADE;\n\n-- Daily aggregates\nCREATE TABLE agg_daily (\n    date_key                 INTEGER PRIMARY KEY REFERENCES dim_date(date_key),\n    full_date                DATE NOT NULL,\n    year                     SMALLINT NOT NULL,\n    month_num                SMALLINT NOT NULL,\n    day_of_week              SMALLINT NOT NULL,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2),\n    cancellation_rate        NUMERIC(5,2),\n    completion_rate          NUMERIC(5,2),\n    avg_wait_time_min        NUMERIC(6,2),\n    avg_duration_min         NUMERIC(6,2),\n    avg_lead_days            NUMERIC(6,2),\n    same_day_bookings        INTEGER NOT NULL DEFAULT 0,\n    early_arrivals           INTEGER NOT NULL DEFAULT 0,\n    late_arrivals            INTEGER NOT NULL DEFAULT 0,\n    est_revenue              NUMERIC(12,2),\n    est_revenue_lost         NUMERIC(12,2)\n);\n\n-- Monthly aggregates\nCREATE TABLE agg_monthly (\n    year                     SMALLINT NOT NULL,\n    month_num                SMALLINT NOT NULL,\n    month_name               VARCHAR(10) NOT NULL,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2),\n    cancellation_rate        NUMERIC(5,2),\n    completion_rate          NUMERIC(5,2),\n    avg_wait_time_min        NUMERIC(6,2),\n    avg_duration_min         NUMERIC(6,2),\n    avg_lead_days            NUMERIC(6,2),\n    working_days             INTEGER,\n    avg_daily_appointments   NUMERIC(6,2),\n    est_revenue              NUMERIC(12,2),\n    est_revenue_lost         NUMERIC(12,2),\n    prev_month_appointments  INTEGER,\n    mom_growth_pct           NUMERIC(6,2),\n    PRIMARY KEY (year, month_num)\n);\n\n-- Yearly aggregates with YoY\nCREATE TABLE agg_yearly (\n    year                     SMALLINT PRIMARY KEY,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2),\n    cancellation_rate        NUMERIC(5,2),\n    completion_rate          NUMERIC(5,2),\n    avg_wait_time_min        NUMERIC(6,2),\n    avg_duration_min         NUMERIC(6,2),\n    avg_lead_days            NUMERIC(6,2),\n    working_days             INTEGER,\n    avg_daily_appointments   NUMERIC(6,2),\n    est_revenue              NUMERIC(12,2),\n    est_revenue_lost         NUMERIC(12,2),\n    -- YoY comparisons\n    prev_year_appointments   INTEGER,\n    prev_year_no_shows       INTEGER,\n    prev_year_patients       INTEGER,\n    prev_year_revenue        NUMERIC(12,2),\n    yoy_appointments_pct     NUMERIC(6,2),\n    yoy_no_shows_pct         NUMERIC(6,2),\n    yoy_patients_pct         NUMERIC(6,2),\n    yoy_revenue_pct          NUMERIC(6,2),\n    yoy_no_show_rate_delta   NUMERIC(5,2)\n);\n\nCREATE INDEX idx_agg_daily_year ON agg_daily(year);\nCREATE INDEX idx_agg_daily_month ON agg_daily(year, month_num);",
+        "query": "-- =============================================\n-- DWH: Load fact_appointment with NO NULLs\n-- Uses COALESCE to default to Unknown (-1) dimension members\n-- =============================================\nINSERT INTO fact_appointment (\n    appointment_id,\n    slot_id,\n    appointment_date_key,\n    scheduling_date_key,\n    appointment_time_key,\n    patient_key,\n    status_key,\n    age_group_key,\n    scheduling_lead_days,\n    appointment_duration_min,\n    waiting_time_min,\n    age_at_appointment,\n    is_same_day_booking,\n    arrived_early,\n    arrived_late\n)\nSELECT\n    sa.appointment_id,\n    COALESCE(sa.slot_id, 'UNKNOWN') AS slot_id,\n    -- Date keys: default to -1 (Unknown) if NULL or not found\n    COALESCE(\n        (SELECT date_key FROM dim_date WHERE full_date = sa.appointment_date::DATE),\n        -1\n    ) AS appointment_date_key,\n    COALESCE(\n        (SELECT date_key FROM dim_date WHERE full_date = sa.scheduling_date::DATE),\n        -1\n    ) AS scheduling_date_key,\n    -- Time key: parse time and find matching key, default to -1\n    COALESCE(\n        (SELECT time_key FROM dim_time WHERE time_key = \n            (EXTRACT(HOUR FROM sa.appointment_time::TIME)::INT * 100 + \n             (EXTRACT(MINUTE FROM sa.appointment_time::TIME)::INT / 15) * 15)),\n        -1\n    ) AS appointment_time_key,\n    -- Patient key: lookup or default to -1\n    COALESCE(\n        (SELECT patient_key FROM dim_patient WHERE patient_id = sa.patient_id),\n        -1\n    ) AS patient_key,\n    -- Status key: lookup or default to -1\n    COALESCE(\n        (SELECT status_key FROM dim_status WHERE status_code = LOWER(sa.status)),\n        -1\n    ) AS status_key,\n    -- Age group key: lookup or default to -1\n    COALESCE(\n        (SELECT age_group_key FROM dim_age_group WHERE age_group_code = sa.age_group),\n        -1\n    ) AS age_group_key,\n    -- Measures: default to 0 instead of NULL\n    COALESCE(sa.scheduling_interval::INT, 0) AS scheduling_lead_days,\n    COALESCE(sa.appointment_duration::NUMERIC(5,2), 0) AS appointment_duration_min,\n    COALESCE(sa.waiting_time::NUMERIC(5,2), 0) AS waiting_time_min,\n    COALESCE(sa.age::INT, 0) AS age_at_appointment,\n    -- Boolean flags: default to FALSE instead of NULL\n    COALESCE(sa.scheduling_date = sa.appointment_date, FALSE) AS is_same_day_booking,\n    CASE \n        WHEN sa.check_in_time IS NULL OR sa.appointment_time IS NULL THEN FALSE\n        WHEN sa.check_in_time::TIME < sa.appointment_time::TIME THEN TRUE\n        ELSE FALSE\n    END AS arrived_early,\n    CASE \n        WHEN sa.check_in_time IS NULL OR sa.appointment_time IS NULL THEN FALSE\n        WHEN sa.check_in_time::TIME > sa.appointment_time::TIME THEN TRUE\n        ELSE FALSE\n    END AS arrived_late\nFROM stg_appointments sa\nWHERE sa.appointment_id IS NOT NULL;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        1824,
-        128
+        1008,
+        336
       ],
-      "id": "26ff5f27-e0ea-4ebb-a391-21fd6bb8324f",
-      "name": "9. Create Aggregate Tables",
+      "id": "4f98deaa-b010-42d5-8728-22e4867cd51a",
+      "name": "6. Load fact_appointment",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- AGGREGATE TABLES: Create schema\n-- =============================================\nDROP TABLE IF EXISTS agg_yearly CASCADE;\nDROP TABLE IF EXISTS agg_monthly CASCADE;\nDROP TABLE IF EXISTS agg_daily CASCADE;\n\n-- Daily aggregates\nCREATE TABLE agg_daily (\n    date_key                 INTEGER PRIMARY KEY REFERENCES dim_date(date_key),\n    full_date                DATE NOT NULL,\n    year                     SMALLINT NOT NULL,\n    month_num                SMALLINT NOT NULL,\n    day_of_week              SMALLINT NOT NULL,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2) NOT NULL DEFAULT 0,\n    cancellation_rate        NUMERIC(5,2) NOT NULL DEFAULT 0,\n    completion_rate          NUMERIC(5,2) NOT NULL DEFAULT 0,\n    avg_wait_time_min        NUMERIC(6,2) NOT NULL DEFAULT 0,\n    avg_duration_min         NUMERIC(6,2) NOT NULL DEFAULT 0,\n    avg_lead_days            NUMERIC(6,2) NOT NULL DEFAULT 0,\n    same_day_bookings        INTEGER NOT NULL DEFAULT 0,\n    early_arrivals           INTEGER NOT NULL DEFAULT 0,\n    late_arrivals            INTEGER NOT NULL DEFAULT 0,\n    est_revenue              NUMERIC(12,2) NOT NULL DEFAULT 0,\n    est_revenue_lost         NUMERIC(12,2) NOT NULL DEFAULT 0\n);\n\n-- Monthly aggregates\nCREATE TABLE agg_monthly (\n    year                     SMALLINT NOT NULL,\n    month_num                SMALLINT NOT NULL,\n    month_name               VARCHAR(10) NOT NULL,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2) NOT NULL DEFAULT 0,\n    cancellation_rate        NUMERIC(5,2) NOT NULL DEFAULT 0,\n    completion_rate          NUMERIC(5,2) NOT NULL DEFAULT 0,\n    avg_wait_time_min        NUMERIC(6,2) NOT NULL DEFAULT 0,\n    avg_duration_min         NUMERIC(6,2) NOT NULL DEFAULT 0,\n    avg_lead_days            NUMERIC(6,2) NOT NULL DEFAULT 0,\n    working_days             INTEGER NOT NULL DEFAULT 0,\n    avg_daily_appointments   NUMERIC(6,2) NOT NULL DEFAULT 0,\n    est_revenue              NUMERIC(12,2) NOT NULL DEFAULT 0,\n    est_revenue_lost         NUMERIC(12,2) NOT NULL DEFAULT 0,\n    prev_month_appointments  INTEGER NOT NULL DEFAULT 0,\n    mom_growth_pct           NUMERIC(6,2) NOT NULL DEFAULT 0,\n    PRIMARY KEY (year, month_num)\n);\n\n-- Yearly aggregates with YoY\nCREATE TABLE agg_yearly (\n    year                     SMALLINT PRIMARY KEY,\n    total_appointments       INTEGER NOT NULL DEFAULT 0,\n    completed_appointments   INTEGER NOT NULL DEFAULT 0,\n    no_show_appointments     INTEGER NOT NULL DEFAULT 0,\n    cancelled_appointments   INTEGER NOT NULL DEFAULT 0,\n    unique_patients          INTEGER NOT NULL DEFAULT 0,\n    no_show_rate             NUMERIC(5,2) NOT NULL DEFAULT 0,\n    cancellation_rate        NUMERIC(5,2) NOT NULL DEFAULT 0,\n    completion_rate          NUMERIC(5,2) NOT NULL DEFAULT 0,\n    avg_wait_time_min        NUMERIC(6,2) NOT NULL DEFAULT 0,\n    avg_duration_min         NUMERIC(6,2) NOT NULL DEFAULT 0,\n    avg_lead_days            NUMERIC(6,2) NOT NULL DEFAULT 0,\n    working_days             INTEGER NOT NULL DEFAULT 0,\n    avg_daily_appointments   NUMERIC(6,2) NOT NULL DEFAULT 0,\n    est_revenue              NUMERIC(12,2) NOT NULL DEFAULT 0,\n    est_revenue_lost         NUMERIC(12,2) NOT NULL DEFAULT 0,\n    -- YoY comparisons\n    prev_year_appointments   INTEGER NOT NULL DEFAULT 0,\n    prev_year_no_shows       INTEGER NOT NULL DEFAULT 0,\n    prev_year_patients       INTEGER NOT NULL DEFAULT 0,\n    prev_year_revenue        NUMERIC(12,2) NOT NULL DEFAULT 0,\n    yoy_appointments_pct     NUMERIC(6,2) NOT NULL DEFAULT 0,\n    yoy_no_shows_pct         NUMERIC(6,2) NOT NULL DEFAULT 0,\n    yoy_patients_pct         NUMERIC(6,2) NOT NULL DEFAULT 0,\n    yoy_revenue_pct          NUMERIC(6,2) NOT NULL DEFAULT 0,\n    yoy_no_show_rate_delta   NUMERIC(5,2) NOT NULL DEFAULT 0\n);\n\nCREATE INDEX idx_agg_daily_year ON agg_daily(year);\nCREATE INDEX idx_agg_daily_month ON agg_daily(year, month_num);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1232,
+        336
+      ],
+      "id": "376f85f0-55b0-4144-bc50-07217ae49039",
+      "name": "7. Create Aggregate Tables",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- POPULATE: Daily aggregates (NO NULLs)\n-- =============================================\nINSERT INTO agg_daily\nSELECT\n    d.date_key,\n    d.full_date,\n    d.year,\n    d.month_num,\n    d.day_of_week,\n    COUNT(f.appointment_key) AS total_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') AS completed_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) AS no_show_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'cancelled') AS cancelled_appointments,\n    COUNT(DISTINCT CASE WHEN f.patient_key != -1 THEN f.patient_key END) AS unique_patients,\n    COALESCE(ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) / NULLIF(COUNT(f.appointment_key), 0), 2), 0) AS no_show_rate,\n    COALESCE(ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'cancelled') / NULLIF(COUNT(f.appointment_key), 0), 2), 0) AS cancellation_rate,\n    COALESCE(ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') / NULLIF(COUNT(f.appointment_key), 0), 2), 0) AS completion_rate,\n    COALESCE(ROUND(AVG(f.waiting_time_min) FILTER (WHERE f.waiting_time_min > 0), 2), 0) AS avg_wait_time_min,\n    COALESCE(ROUND(AVG(f.appointment_duration_min) FILTER (WHERE f.appointment_duration_min > 0), 2), 0) AS avg_duration_min,\n    COALESCE(ROUND(AVG(f.scheduling_lead_days) FILTER (WHERE f.scheduling_lead_days > 0), 2), 0) AS avg_lead_days,\n    COUNT(f.appointment_key) FILTER (WHERE f.is_same_day_booking = TRUE) AS same_day_bookings,\n    COUNT(f.appointment_key) FILTER (WHERE f.arrived_early = TRUE) AS early_arrivals,\n    COUNT(f.appointment_key) FILTER (WHERE f.arrived_late = TRUE) AS late_arrivals,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') * 150.00 AS est_revenue,\n    COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) * 150.00 AS est_revenue_lost\nFROM dim_date d\nLEFT JOIN fact_appointment f ON f.appointment_date_key = d.date_key\nLEFT JOIN dim_status s ON f.status_key = s.status_key\nWHERE d.date_key != -1 AND d.full_date BETWEEN '2015-01-01' AND '2024-12-31'\nGROUP BY d.date_key, d.full_date, d.year, d.month_num, d.day_of_week\nHAVING COUNT(f.appointment_key) > 0;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1456,
+        336
+      ],
+      "id": "3669d777-e57c-4aad-b042-044ab1ded55a",
+      "name": "8a. Populate agg_daily",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- POPULATE: Monthly aggregates (NO NULLs)\n-- =============================================\nINSERT INTO agg_monthly\nWITH monthly_base AS (\n    SELECT\n        ad.year,\n        ad.month_num,\n        MAX(dd.month_name) AS month_name,\n        SUM(ad.total_appointments) AS total_appointments,\n        SUM(ad.completed_appointments) AS completed_appointments,\n        SUM(ad.no_show_appointments) AS no_show_appointments,\n        SUM(ad.cancelled_appointments) AS cancelled_appointments,\n        COUNT(DISTINCT ad.date_key) FILTER (WHERE ad.total_appointments > 0) AS working_days,\n        SUM(ad.est_revenue) AS est_revenue,\n        SUM(ad.est_revenue_lost) AS est_revenue_lost\n    FROM agg_daily ad\n    JOIN dim_date dd ON ad.date_key = dd.date_key\n    GROUP BY ad.year, ad.month_num\n),\nmonthly_patients AS (\n    SELECT\n        d.year,\n        d.month_num,\n        COUNT(DISTINCT CASE WHEN f.patient_key != -1 THEN f.patient_key END) AS unique_patients,\n        COALESCE(AVG(f.waiting_time_min) FILTER (WHERE f.waiting_time_min > 0), 0) AS avg_wait_time_min,\n        COALESCE(AVG(f.appointment_duration_min) FILTER (WHERE f.appointment_duration_min > 0), 0) AS avg_duration_min,\n        COALESCE(AVG(f.scheduling_lead_days) FILTER (WHERE f.scheduling_lead_days > 0), 0) AS avg_lead_days\n    FROM fact_appointment f\n    JOIN dim_date d ON f.appointment_date_key = d.date_key\n    WHERE d.date_key != -1\n    GROUP BY d.year, d.month_num\n)\nSELECT\n    mb.year,\n    mb.month_num,\n    mb.month_name,\n    mb.total_appointments,\n    mb.completed_appointments,\n    mb.no_show_appointments,\n    mb.cancelled_appointments,\n    COALESCE(mp.unique_patients, 0),\n    COALESCE(ROUND(100.0 * mb.no_show_appointments / NULLIF(mb.total_appointments, 0), 2), 0),\n    COALESCE(ROUND(100.0 * mb.cancelled_appointments / NULLIF(mb.total_appointments, 0), 2), 0),\n    COALESCE(ROUND(100.0 * mb.completed_appointments / NULLIF(mb.total_appointments, 0), 2), 0),\n    COALESCE(ROUND(mp.avg_wait_time_min::NUMERIC, 2), 0),\n    COALESCE(ROUND(mp.avg_duration_min::NUMERIC, 2), 0),\n    COALESCE(ROUND(mp.avg_lead_days::NUMERIC, 2), 0),\n    COALESCE(mb.working_days, 0),\n    COALESCE(ROUND(mb.total_appointments::NUMERIC / NULLIF(mb.working_days, 0), 2), 0),\n    COALESCE(mb.est_revenue, 0),\n    COALESCE(mb.est_revenue_lost, 0),\n    COALESCE(LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num), 0),\n    COALESCE(ROUND(100.0 * (mb.total_appointments - LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num)) / NULLIF(LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num), 0), 2), 0)\nFROM monthly_base mb\nLEFT JOIN monthly_patients mp ON mb.year = mp.year AND mb.month_num = mp.month_num\nWHERE mb.total_appointments > 0;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1680,
+        336
+      ],
+      "id": "bd95cc55-43f2-4824-b428-5a104b3d6952",
+      "name": "8b. Populate agg_monthly",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- POPULATE: Yearly aggregates with YoY (NO NULLs)\n-- =============================================\nINSERT INTO agg_yearly\nWITH yearly_base AS (\n    SELECT\n        year,\n        SUM(total_appointments) AS total_appointments,\n        SUM(completed_appointments) AS completed_appointments,\n        SUM(no_show_appointments) AS no_show_appointments,\n        SUM(cancelled_appointments) AS cancelled_appointments,\n        SUM(working_days) AS working_days,\n        SUM(est_revenue) AS est_revenue,\n        SUM(est_revenue_lost) AS est_revenue_lost\n    FROM agg_monthly\n    GROUP BY year\n),\nyearly_patients AS (\n    SELECT\n        d.year,\n        COUNT(DISTINCT CASE WHEN f.patient_key != -1 THEN f.patient_key END) AS unique_patients,\n        COALESCE(AVG(f.waiting_time_min) FILTER (WHERE f.waiting_time_min > 0), 0) AS avg_wait_time_min,\n        COALESCE(AVG(f.appointment_duration_min) FILTER (WHERE f.appointment_duration_min > 0), 0) AS avg_duration_min,\n        COALESCE(AVG(f.scheduling_lead_days) FILTER (WHERE f.scheduling_lead_days > 0), 0) AS avg_lead_days\n    FROM fact_appointment f\n    JOIN dim_date d ON f.appointment_date_key = d.date_key\n    WHERE d.date_key != -1\n    GROUP BY d.year\n)\nSELECT\n    yb.year,\n    yb.total_appointments,\n    yb.completed_appointments,\n    yb.no_show_appointments,\n    yb.cancelled_appointments,\n    COALESCE(yp.unique_patients, 0),\n    COALESCE(ROUND(100.0 * yb.no_show_appointments / NULLIF(yb.total_appointments, 0), 2), 0),\n    COALESCE(ROUND(100.0 * yb.cancelled_appointments / NULLIF(yb.total_appointments, 0), 2), 0),\n    COALESCE(ROUND(100.0 * yb.completed_appointments / NULLIF(yb.total_appointments, 0), 2), 0),\n    COALESCE(ROUND(yp.avg_wait_time_min::NUMERIC, 2), 0),\n    COALESCE(ROUND(yp.avg_duration_min::NUMERIC, 2), 0),\n    COALESCE(ROUND(yp.avg_lead_days::NUMERIC, 2), 0),\n    COALESCE(yb.working_days, 0),\n    COALESCE(ROUND(yb.total_appointments::NUMERIC / NULLIF(yb.working_days, 0), 2), 0),\n    COALESCE(yb.est_revenue, 0),\n    COALESCE(yb.est_revenue_lost, 0),\n    -- YoY comparisons (all default to 0)\n    COALESCE(LAG(yb.total_appointments) OVER (ORDER BY yb.year), 0),\n    COALESCE(LAG(yb.no_show_appointments) OVER (ORDER BY yb.year), 0),\n    COALESCE(LAG(yp.unique_patients) OVER (ORDER BY yb.year), 0),\n    COALESCE(LAG(yb.est_revenue) OVER (ORDER BY yb.year), 0),\n    COALESCE(ROUND(100.0 * (yb.total_appointments - LAG(yb.total_appointments) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.total_appointments) OVER (ORDER BY yb.year), 0), 2), 0),\n    COALESCE(ROUND(100.0 * (yb.no_show_appointments - LAG(yb.no_show_appointments) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.no_show_appointments) OVER (ORDER BY yb.year), 0), 2), 0),\n    COALESCE(ROUND(100.0 * (yp.unique_patients - LAG(yp.unique_patients) OVER (ORDER BY yb.year)) / NULLIF(LAG(yp.unique_patients) OVER (ORDER BY yb.year), 0), 2), 0),\n    COALESCE(ROUND(100.0 * (yb.est_revenue - LAG(yb.est_revenue) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.est_revenue) OVER (ORDER BY yb.year), 0), 2), 0),\n    COALESCE(ROUND((100.0 * yb.no_show_appointments / NULLIF(yb.total_appointments, 0)) - (100.0 * LAG(yb.no_show_appointments) OVER (ORDER BY yb.year) / NULLIF(LAG(yb.total_appointments) OVER (ORDER BY yb.year), 0)), 2), 0)\nFROM yearly_base yb\nLEFT JOIN yearly_patients yp ON yb.year = yp.year;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1904,
+        336
+      ],
+      "id": "37569c21-deae-4c3f-86f9-45f0d282adc3",
+      "name": "8c. Populate agg_yearly",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "y9M2F5HJ6KkJLyVa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- =============================================\n-- DATA QUALITY: Verify table counts and no NULLs\n-- =============================================\nSELECT 'dim_date' AS tbl, COUNT(*) AS cnt, 0 AS null_count FROM dim_date\nUNION ALL SELECT 'dim_time', COUNT(*), 0 FROM dim_time\nUNION ALL SELECT 'dim_status', COUNT(*), 0 FROM dim_status\nUNION ALL SELECT 'dim_age_group', COUNT(*), 0 FROM dim_age_group\nUNION ALL SELECT 'dim_insurance', COUNT(*), 0 FROM dim_insurance\nUNION ALL SELECT 'dim_patient', COUNT(*), 0 FROM dim_patient\nUNION ALL SELECT 'fact_appointment', COUNT(*), \n    (SELECT COUNT(*) FROM fact_appointment WHERE patient_key IS NULL OR status_key IS NULL) FROM fact_appointment\nUNION ALL SELECT 'agg_daily', COUNT(*), 0 FROM agg_daily\nUNION ALL SELECT 'agg_monthly', COUNT(*), 0 FROM agg_monthly\nUNION ALL SELECT 'agg_yearly', COUNT(*), 0 FROM agg_yearly\nORDER BY tbl;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2128,
+        336
+      ],
+      "id": "b3dd3bea-9c31-4914-a3a5-97970860900a",
+      "name": "9. Verify & Quality Check",
       "executeOnce": true,
       "credentials": {
         "postgres": {
@@ -346,66 +492,6 @@
           "name": "Postgres account"
         }
       }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "-- =============================================\n-- POPULATE: Daily aggregates\n-- =============================================\nINSERT INTO agg_daily\nSELECT\n    d.date_key,\n    d.full_date,\n    d.year,\n    d.month_num,\n    d.day_of_week,\n    COUNT(f.appointment_key) AS total_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') AS completed_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) AS no_show_appointments,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'cancelled') AS cancelled_appointments,\n    COUNT(DISTINCT f.patient_key) AS unique_patients,\n    ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) / NULLIF(COUNT(f.appointment_key), 0), 2) AS no_show_rate,\n    ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'cancelled') / NULLIF(COUNT(f.appointment_key), 0), 2) AS cancellation_rate,\n    ROUND(100.0 * COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') / NULLIF(COUNT(f.appointment_key), 0), 2) AS completion_rate,\n    ROUND(AVG(f.waiting_time_min), 2) AS avg_wait_time_min,\n    ROUND(AVG(f.appointment_duration_min), 2) AS avg_duration_min,\n    ROUND(AVG(f.scheduling_lead_days), 2) AS avg_lead_days,\n    COUNT(f.appointment_key) FILTER (WHERE f.is_same_day_booking = TRUE) AS same_day_bookings,\n    COUNT(f.appointment_key) FILTER (WHERE f.arrived_early = TRUE) AS early_arrivals,\n    COUNT(f.appointment_key) FILTER (WHERE f.arrived_late = TRUE) AS late_arrivals,\n    COUNT(f.appointment_key) FILTER (WHERE s.status_category = 'attended') * 150.00 AS est_revenue,\n    COUNT(f.appointment_key) FILTER (WHERE s.is_no_show = TRUE) * 150.00 AS est_revenue_lost\nFROM dim_date d\nLEFT JOIN fact_appointment f ON f.appointment_date_key = d.date_key\nLEFT JOIN dim_status s ON f.status_key = s.status_key\nWHERE d.full_date BETWEEN '2015-01-01' AND '2024-12-31'\nGROUP BY d.date_key, d.full_date, d.year, d.month_num, d.day_of_week;\n\n-- =============================================\n-- POPULATE: Monthly aggregates\n-- =============================================\nINSERT INTO agg_monthly\nWITH monthly_base AS (\n    SELECT\n        ad.year,\n        ad.month_num,\n        MAX(dd.month_name) AS month_name,\n        SUM(ad.total_appointments) AS total_appointments,\n        SUM(ad.completed_appointments) AS completed_appointments,\n        SUM(ad.no_show_appointments) AS no_show_appointments,\n        SUM(ad.cancelled_appointments) AS cancelled_appointments,\n        COUNT(DISTINCT ad.date_key) FILTER (WHERE ad.total_appointments > 0) AS working_days,\n        SUM(ad.est_revenue) AS est_revenue,\n        SUM(ad.est_revenue_lost) AS est_revenue_lost\n    FROM agg_daily ad\n    JOIN dim_date dd ON ad.date_key = dd.date_key\n    GROUP BY ad.year, ad.month_num\n),\nmonthly_patients AS (\n    SELECT\n        d.year,\n        d.month_num,\n        COUNT(DISTINCT f.patient_key) AS unique_patients,\n        AVG(f.waiting_time_min) AS avg_wait_time_min,\n        AVG(f.appointment_duration_min) AS avg_duration_min,\n        AVG(f.scheduling_lead_days) AS avg_lead_days\n    FROM fact_appointment f\n    JOIN dim_date d ON f.appointment_date_key = d.date_key\n    GROUP BY d.year, d.month_num\n)\nSELECT\n    mb.year,\n    mb.month_num,\n    mb.month_name,\n    mb.total_appointments,\n    mb.completed_appointments,\n    mb.no_show_appointments,\n    mb.cancelled_appointments,\n    COALESCE(mp.unique_patients, 0),\n    ROUND(100.0 * mb.no_show_appointments / NULLIF(mb.total_appointments, 0), 2),\n    ROUND(100.0 * mb.cancelled_appointments / NULLIF(mb.total_appointments, 0), 2),\n    ROUND(100.0 * mb.completed_appointments / NULLIF(mb.total_appointments, 0), 2),\n    ROUND(mp.avg_wait_time_min, 2),\n    ROUND(mp.avg_duration_min, 2),\n    ROUND(mp.avg_lead_days, 2),\n    mb.working_days,\n    ROUND(mb.total_appointments::NUMERIC / NULLIF(mb.working_days, 0), 2),\n    mb.est_revenue,\n    mb.est_revenue_lost,\n    LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num),\n    ROUND(100.0 * (mb.total_appointments - LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num)) / NULLIF(LAG(mb.total_appointments) OVER (ORDER BY mb.year, mb.month_num), 0), 2)\nFROM monthly_base mb\nLEFT JOIN monthly_patients mp ON mb.year = mp.year AND mb.month_num = mp.month_num\nWHERE mb.total_appointments > 0;\n\n-- =============================================\n-- POPULATE: Yearly aggregates with YoY\n-- =============================================\nINSERT INTO agg_yearly\nWITH yearly_base AS (\n    SELECT\n        year,\n        SUM(total_appointments) AS total_appointments,\n        SUM(completed_appointments) AS completed_appointments,\n        SUM(no_show_appointments) AS no_show_appointments,\n        SUM(cancelled_appointments) AS cancelled_appointments,\n        SUM(working_days) AS working_days,\n        SUM(est_revenue) AS est_revenue,\n        SUM(est_revenue_lost) AS est_revenue_lost\n    FROM agg_monthly\n    GROUP BY year\n),\nyearly_patients AS (\n    SELECT\n        d.year,\n        COUNT(DISTINCT f.patient_key) AS unique_patients,\n        AVG(f.waiting_time_min) AS avg_wait_time_min,\n        AVG(f.appointment_duration_min) AS avg_duration_min,\n        AVG(f.scheduling_lead_days) AS avg_lead_days\n    FROM fact_appointment f\n    JOIN dim_date d ON f.appointment_date_key = d.date_key\n    GROUP BY d.year\n)\nSELECT\n    yb.year,\n    yb.total_appointments,\n    yb.completed_appointments,\n    yb.no_show_appointments,\n    yb.cancelled_appointments,\n    COALESCE(yp.unique_patients, 0),\n    ROUND(100.0 * yb.no_show_appointments / NULLIF(yb.total_appointments, 0), 2),\n    ROUND(100.0 * yb.cancelled_appointments / NULLIF(yb.total_appointments, 0), 2),\n    ROUND(100.0 * yb.completed_appointments / NULLIF(yb.total_appointments, 0), 2),\n    ROUND(yp.avg_wait_time_min, 2),\n    ROUND(yp.avg_duration_min, 2),\n    ROUND(yp.avg_lead_days, 2),\n    yb.working_days,\n    ROUND(yb.total_appointments::NUMERIC / NULLIF(yb.working_days, 0), 2),\n    yb.est_revenue,\n    yb.est_revenue_lost,\n    -- YoY comparisons\n    LAG(yb.total_appointments) OVER (ORDER BY yb.year),\n    LAG(yb.no_show_appointments) OVER (ORDER BY yb.year),\n    LAG(yp.unique_patients) OVER (ORDER BY yb.year),\n    LAG(yb.est_revenue) OVER (ORDER BY yb.year),\n    ROUND(100.0 * (yb.total_appointments - LAG(yb.total_appointments) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.total_appointments) OVER (ORDER BY yb.year), 0), 2),\n    ROUND(100.0 * (yb.no_show_appointments - LAG(yb.no_show_appointments) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.no_show_appointments) OVER (ORDER BY yb.year), 0), 2),\n    ROUND(100.0 * (yp.unique_patients - LAG(yp.unique_patients) OVER (ORDER BY yb.year)) / NULLIF(LAG(yp.unique_patients) OVER (ORDER BY yb.year), 0), 2),\n    ROUND(100.0 * (yb.est_revenue - LAG(yb.est_revenue) OVER (ORDER BY yb.year)) / NULLIF(LAG(yb.est_revenue) OVER (ORDER BY yb.year), 0), 2),\n    ROUND((100.0 * yb.no_show_appointments / NULLIF(yb.total_appointments, 0)) - (100.0 * LAG(yb.no_show_appointments) OVER (ORDER BY yb.year) / NULLIF(LAG(yb.total_appointments) OVER (ORDER BY yb.year), 0)), 2)\nFROM yearly_base yb\nLEFT JOIN yearly_patients yp ON yb.year = yp.year;",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        2048,
-        128
-      ],
-      "id": "416a3ab1-ba32-4209-94d0-abafc529cbaa",
-      "name": "10. Populate Aggregates",
-      "executeOnce": true,
-      "credentials": {
-        "postgres": {
-          "id": "y9M2F5HJ6KkJLyVa",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT 'dim_date' AS tbl, COUNT(*) AS cnt FROM dim_date\nUNION ALL SELECT 'dim_time', COUNT(*) FROM dim_time\nUNION ALL SELECT 'dim_status', COUNT(*) FROM dim_status\nUNION ALL SELECT 'dim_age_group', COUNT(*) FROM dim_age_group\nUNION ALL SELECT 'dim_insurance', COUNT(*) FROM dim_insurance\nUNION ALL SELECT 'dim_patient', COUNT(*) FROM dim_patient\nUNION ALL SELECT 'fact_appointment', COUNT(*) FROM fact_appointment\nUNION ALL SELECT 'agg_daily', COUNT(*) FROM agg_daily\nUNION ALL SELECT 'agg_monthly', COUNT(*) FROM agg_monthly\nUNION ALL SELECT 'agg_yearly', COUNT(*) FROM agg_yearly\nORDER BY tbl;",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        112,
-        976
-      ],
-      "id": "8de0659b-0ebd-49f5-82ee-da3991076a2a",
-      "name": "8. Verify Counts",
-      "executeOnce": true,
-      "credentials": {
-        "postgres": {
-          "id": "y9M2F5HJ6KkJLyVa",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "batchSize": 2000,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        1200,
-        304
-      ],
-      "id": "085536a6-8eba-49d7-a21b-de6dc4dc8384",
-      "name": "Loop Over Items",
-      "executeOnce": false,
-      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -414,60 +500,99 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        96,
-        272
+        352,
+        304
       ],
-      "id": "fa24bc27-4c82-4ecc-8e32-2afa159203f7",
+      "id": "d92988a8-af69-4189-8c43-20c85c444f6d",
       "name": "Merge",
       "alwaysOutputData": true,
       "executeOnce": true
-    },
-    {
-      "parameters": {
-        "path": "346ac09a-5cbe-4970-8a7b-6765876ff5da",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        -144,
-        976
-      ],
-      "id": "8c34829c-337d-401e-9107-0770384ac9fb",
-      "name": "Webhook",
-      "webhookId": "346ac09a-5cbe-4970-8a7b-6765876ff5da"
-    },
-    {
-      "parameters": {
-        "aggregate": "aggregateAllItemData",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.aggregate",
-      "typeVersion": 1,
-      "position": [
-        352,
-        976
-      ],
-      "id": "bec9b336-3830-4859-b863-6084ec531be8",
-      "name": "Aggregate"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        560,
-        976
-      ],
-      "id": "75b51ac6-136d-483e-a661-17e8956acd36",
-      "name": "Respond to Webhook"
     }
   ],
   "pinData": {},
   "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "8. Verify Counts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "8. Verify Counts1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Verify Counts": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Verify Counts1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Start ETL": {
       "main": [
         [
@@ -491,6 +616,17 @@
       ]
     },
     "2. Load CSVs to STG": {
+      "main": [
+        [
+          {
+            "node": "2b. Clean & Normalize STG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2b. Clean & Normalize STG": {
       "main": [
         [
           {
@@ -571,144 +707,88 @@
         ]
       ]
     },
-    "5a. Read Insurance from STG": {
-      "main": [
-        [
-          {
-            "node": "5b. Insert dim_insurance",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "5b. Insert dim_insurance": {
-      "main": [
-        [
-          {
-            "node": "6c. Insert dim_patient",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "6c. Insert dim_patient": {
-      "main": [
-        [
-          {
-            "node": "7a. Read Appointments from STG",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "7a. Read Appointments from STG": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "7b. Transform Appointments": {
-      "main": [
-        [
-          {
-            "node": "7c. Insert fact_appointment",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "7c. Insert fact_appointment": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items": {
-      "main": [
-        [
-          {
-            "node": "9. Create Aggregate Tables",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "7b. Transform Appointments",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "9. Create Aggregate Tables": {
-      "main": [
-        [
-          {
-            "node": "10. Populate Aggregates",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "10. Populate Aggregates": {
-      "main": [
-        []
-      ]
-    },
     "Merge": {
       "main": [
         [
           {
-            "node": "5a. Read Insurance from STG",
+            "node": "5a. dim_insurance",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Webhook": {
+    "5a. dim_insurance": {
       "main": [
         [
           {
-            "node": "8. Verify Counts",
+            "node": "5b. dim_patient",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "8. Verify Counts": {
+    "5b. dim_patient": {
       "main": [
         [
           {
-            "node": "Aggregate",
+            "node": "6. Load fact_appointment",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Aggregate": {
+    "6. Load fact_appointment": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "7. Create Aggregate Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Create Aggregate Tables": {
+      "main": [
+        [
+          {
+            "node": "8a. Populate agg_daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8a. Populate agg_daily": {
+      "main": [
+        [
+          {
+            "node": "8b. Populate agg_monthly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8b. Populate agg_monthly": {
+      "main": [
+        [
+          {
+            "node": "8c. Populate agg_yearly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8c. Populate agg_yearly": {
+      "main": [
+        [
+          {
+            "node": "9. Verify & Quality Check",
             "type": "main",
             "index": 0
           }
@@ -720,7 +800,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2a94d9c6-ec95-4200-b807-bea7343eeefa",
+  "versionId": "7e086f78-47a9-4523-bcf8-42291b91cf40",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d3be751d8afea4582fbe5a683166007f2b82aa6e87df42cdc3f2f15964e7f0c5"
