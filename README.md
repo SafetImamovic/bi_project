@@ -98,6 +98,9 @@ This project provides comprehensive analytics for medical appointment scheduling
 
 ## Key Metrics & KPIs
 
+![alt text](images/image_2.png)
+![alt text](images/image_3.png)
+
 ### Operational Efficiency
 
 | KPI | Description | Formula |
@@ -276,6 +279,7 @@ The `CLAUDE.md` file provides context to Claude Code instances:
 The project includes setup scripts for automated installation:
 
 **Windows (PowerShell):**
+
 ```powershell
 # Full setup
 .\setup.ps1 setup
@@ -289,6 +293,7 @@ The project includes setup scripts for automated installation:
 ```
 
 **Linux/macOS (Bash):**
+
 ```bash
 # Make executable
 chmod +x setup.sh
@@ -408,6 +413,7 @@ In n8n, create a PostgreSQL credential:
 3. Verify row counts in the final node output
 
 Expected counts (approximate):
+
 ```
 dim_date: ~4,383
 dim_time: 96
@@ -441,6 +447,8 @@ Update `N8N_WEBHOOK_URL` in `.env` with the ngrok URL.
 ---
 
 ## ETL Pipeline
+
+![alt text](images/image.png)
 
 The n8n workflow implements a staged ETL process:
 
@@ -749,6 +757,7 @@ The project includes a Discord bot that provides a chat interface for interactin
 3. **Configure Environment**
 
    Add to your root `.env`:
+
    ```bash
    DISCORD_TOKEN=your_bot_token
    DISCORD_CLIENT_ID=your_application_id
@@ -763,12 +772,15 @@ The project includes a Discord bot that provides a chat interface for interactin
    - Copy and open the generated URL
 
 5. **Start ngrok Tunnel**
+
    ```bash
    ngrok http 5678
    ```
+
    Update `N8N_WEBHOOK_URL` in `.env` with the ngrok URL.
 
 6. **Deploy Commands**
+
    ```bash
    cd discord-bot
    npm install
@@ -776,6 +788,7 @@ The project includes a Discord bot that provides a chat interface for interactin
    ```
 
 7. **Start the Bot**
+
    ```bash
    node index.js
    ```
@@ -785,43 +798,17 @@ The project includes a Discord bot that provides a chat interface for interactin
 In your Discord server:
 
 **Verify Data:**
+
 ```
 /verify-data
 ```
+
 Returns row counts for all DWH tables.
 
 **Insurance Report:**
+
 ```
 /insurance-report
-```
-Returns a markdown-formatted table with all insurance providers:
-```
-# Insurance Providers Report
-
-| Rank | Provider | Patients | Appointments | Completion | No-Show | Sentiment |
-|------|----------|----------|--------------|------------|---------|-----------|
-| #1 | Aetna | 245 | 12,500 | 78.5% | 18.2% | Good |
-| #2 | BlueCross | 198 | 10,200 | 80.1% | 16.5% | Excellent |
-...
-```
-
-**Top Insurers:**
-```
-/top-insurers
-```
-Returns detailed breakdown of top 3 providers:
-```
-# Top 3 Insurance Providers
-
-## Aetna
-- **Rank:** #1
-- **Patients:** 245
-- **Appointments:** 12,500
-- **Completion Rate:** 78.5%
-- **No-Show Rate:** 18.2%
-- **Sentiment:** Good (7.2/10)
-- **Website:** https://aetna.com
-...
 ```
 
 ---
@@ -835,24 +822,28 @@ The Power BI report includes a comprehensive executive dashboard with 120+ measu
 #### Recommended Dashboard Layout
 
 **Page 1: Executive Summary**
+
 - KPI Cards: Total Appointments, YoY Growth %, No-Show Rate, Patient Volume
 - Status indicators (green/yellow/red) for each KPI
 - Trend sparklines for 12-month performance
 - Executive summary text card
 
 **Page 2: Operations & Quality**
+
 - No-Show Rate trend line
 - Completion Rate by Insurance (bar chart)
 - Avg Wait Time gauge
 - Peak Hours heatmap
 
 **Page 4: Insurance Analytics**
+
 - Insurance Rankings table (from calculated table)
 - Top 3 Insurers cards
 - Sentiment Score distribution
 - Market Share (Top 3 vs Others) donut chart
 
 **Page 5: Demographics & Time**
+
 - Appointments by Age Group
 - Day-of-Week patterns
 - Morning vs Afternoon split
@@ -1001,7 +992,3 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) validates:
 - File structure
 
 ---
-
-## License
-
-MIT
