@@ -37,8 +37,11 @@ client.on('interactionCreate', async interaction => {
                 return interaction.editReply('Failed to fetch data from webhook');
             }
 
+
             const data = await res.json();
-            const reply = data.data.map(item => `${item.tbl}: ${item.cnt}`).join('\n');
+            console.log(data);
+            const reply = data[0].text;
+            console.log(reply);
 
             await interaction.editReply(reply);
         } catch (error) {
