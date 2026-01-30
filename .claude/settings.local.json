@@ -13,7 +13,9 @@
       "mcp__powerbi-modeling-mcp__dax_query_operations",
       "mcp__postgres__execute_sql",
       "mcp__powerbi-modeling-mcp__named_expression_operations",
-      "mcp__powerbi-modeling-mcp__relationship_operations"
+      "mcp__powerbi-modeling-mcp__relationship_operations",
+      "Bash(node -e:*)",
+      "mcp__powerbi-modeling-mcp__model_operations"
     ]
   },
   "enableAllProjectMcpServers": true,
