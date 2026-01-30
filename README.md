@@ -145,14 +145,6 @@ This project provides comprehensive analytics for medical appointment scheduling
 | **Seasonal Patterns** | Monthly/quarterly volume trends | Capacity planning |
 | **Morning vs Afternoon** | Performance comparison by day period | Slot allocation strategy |
 
-### Financial Impact (Derived)
-
-| KPI | Description | Formula |
-|-----|-------------|---------|
-| **Revenue Loss from No-Shows** | Estimated lost revenue | `no_shows × avg_appointment_value` |
-| **Idle Time Cost** | Staff cost during unfilled slots | `empty_slots × slot_duration × hourly_rate` |
-| **Overtime Cost** | Cost from appointments running over | `overtime_minutes × hourly_rate` |
-
 ---
 
 ## Architecture
@@ -213,7 +205,7 @@ This project provides comprehensive analytics for medical appointment scheduling
 | **ETL** | n8n | Workflow automation, data transformation |
 | **Database** | PostgreSQL | Staging + DWH storage |
 | **DB Admin** | Adminer | Web-based DB management |
-| **Search/AI** | SearxNG | Meta search for data enrichment |
+| **Search/AI** | SearxNG | Meta search for insurance data enrichment |
 | **Visualization** | Power BI | Dashboards and reporting |
 | **Chat Interface** | Discord.js | Bot for webhook interactions |
 | **Tunneling** | ngrok | Expose local webhooks to Discord |
@@ -397,7 +389,7 @@ docker compose exec db psql -U postgres -c "CREATE DATABASE medical_dwh;"
 1. Open n8n at <http://localhost:5678>
 2. Login with credentials from `.env`
 3. Go to **Workflows** → **Import from File**
-4. Import `n8n/workflows/ETL Medical Appointments.json`
+4. Import `n8n/workflows/ETL.json` (consolidated ETL + Webhooks)
 
 #### 6. Configure n8n PostgreSQL Credentials
 
@@ -415,16 +407,16 @@ In n8n, create a PostgreSQL credential:
 2. Click **Execute Workflow**
 3. Verify row counts in the final node output
 
-Expected counts:
+Expected counts (approximate):
 ```
-dim_date: 4383
+dim_date: ~4,383
 dim_time: 96
 dim_status: 3
 dim_age_group: 16
-dim_insurance: 5
-dim_patient: 1000
-fact_appointment: 50000
-agg_daily: ~3653
+dim_insurance: 5 (with enriched analytics)
+dim_patient: ~1,000
+fact_appointment: ~111,488
+agg_daily: ~3,653
 agg_monthly: ~120
 agg_yearly: ~10
 ```
@@ -514,6 +506,9 @@ The n8n workflow implements a staged ETL process:
 | 7b | Key derivation | Date keys (YYYYMMDD), Time keys (HHMM) |
 | 7b | Flag derivation | `is_same_day_booking`, `arrived_early`, `arrived_late` |
 | 7c | FK lookups | Subqueries to resolve surrogate keys |
+| 8a-c | Aggregates | Populate agg_daily, agg_monthly, agg_yearly |
+| 8d | Insurance Analytics | Calculate rankings, sentiment scores |
+| 9 | Enrichment | Query SearXNG for insurance website URLs |
 
 ---
 
@@ -580,12 +575,28 @@ Patient age brackets (5-year intervals).
 
 #### dim_insurance
 
-Insurance providers (extracted from patients).
+Insurance providers with enriched analytics data.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | insurance_key | SERIAL | PK |
 | insurance_name | VARCHAR | Provider name |
+| website_url | VARCHAR | Official website (via SearXNG) |
+| company_description | TEXT | Company description |
+| headquarters_location | VARCHAR | HQ location |
+| phone_number | VARCHAR | Contact number |
+| founded_year | SMALLINT | Year founded |
+| logo_url | VARCHAR | Company logo URL |
+| total_patients | INT | Patient count using this insurer |
+| total_appointments | INT | Total appointments for this insurer |
+| usage_rank | SMALLINT | Rank by appointment volume |
+| completion_rate | NUMERIC | Appointment completion rate |
+| no_show_rate | NUMERIC | No-show rate |
+| cancellation_rate | NUMERIC | Cancellation rate |
+| avg_wait_time_min | NUMERIC | Average patient wait time |
+| sentiment_score | NUMERIC | Calculated sentiment (0-10) |
+| sentiment_label | VARCHAR | Excellent/Good/Average/Poor |
+| last_enriched_at | TIMESTAMP | Last enrichment timestamp |
 
 #### dim_patient
 
@@ -641,6 +652,59 @@ Grain: One row per appointment.
 | arrived_early | BOOLEAN | Check-in before appointment time |
 | arrived_late | BOOLEAN | Check-in after appointment time |
 
+### Aggregate Tables
+
+Pre-calculated rollups for fast dashboard performance.
+
+#### agg_daily
+
+Daily appointment metrics (one row per day).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| appointment_date | DATE | PK |
+| total_appointments | INT | Daily count |
+| completed_appointments | INT | Completed count |
+| no_show_appointments | INT | No-show count |
+| cancelled_appointments | INT | Cancelled count |
+| unique_patients | INT | Distinct patients |
+| no_show_rate | NUMERIC | Daily no-show % |
+| completion_rate | NUMERIC | Daily completion % |
+| avg_wait_time_min | NUMERIC | Avg wait time |
+| avg_duration_min | NUMERIC | Avg appointment length |
+| same_day_bookings | INT | Same-day booking count |
+| early_arrivals | INT | Early arrival count |
+| late_arrivals | INT | Late arrival count |
+
+#### agg_monthly
+
+Monthly rollups with MoM comparisons.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| year | INT | Year |
+| month | INT | Month (1-12) |
+| total_appointments | INT | Monthly count |
+| no_show_rate | NUMERIC | Monthly rate |
+| mom_appointments_pct | NUMERIC | MoM growth % |
+
+#### agg_yearly
+
+Yearly rollups with YoY comparisons.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| year | INT | PK |
+| total_appointments | INT | Yearly count |
+| unique_patients | INT | Distinct patients |
+| prev_year_appointments | INT | Prior year count |
+| prev_year_no_shows | INT | Prior year no-shows |
+| prev_year_patients | INT | Prior year patients |
+| yoy_appointments_pct | NUMERIC | YoY growth % |
+| yoy_no_shows_pct | NUMERIC | YoY no-show change % |
+| yoy_patients_pct | NUMERIC | YoY patient change % |
+| yoy_no_show_rate_delta | NUMERIC | Change in no-show rate |
+
 ---
 
 ## Discord Bot
@@ -652,6 +716,8 @@ The project includes a Discord bot that provides a chat interface for interactin
 | Command | Description |
 |---------|-------------|
 | `/verify-data` | Returns row counts from all DWH tables |
+| `/insurance-report` | Full insurance provider analytics report with rankings, sentiment scores, and performance metrics |
+| `/top-insurers` | Top 3 insurance providers by usage with detailed breakdown |
 
 ### Architecture
 
@@ -717,27 +783,94 @@ The project includes a Discord bot that provides a chat interface for interactin
 ### Usage
 
 In your Discord server:
+
+**Verify Data:**
 ```
 /verify-data
 ```
+Returns row counts for all DWH tables.
 
-Returns:
+**Insurance Report:**
 ```
-agg_daily: 3653
-agg_monthly: 120
-agg_yearly: 10
-dim_age_group: 16
-dim_date: 4383
-dim_insurance: 5
-dim_patient: 1000
-dim_status: 3
-dim_time: 96
-fact_appointment: 50000
+/insurance-report
+```
+Returns a markdown-formatted table with all insurance providers:
+```
+# Insurance Providers Report
+
+| Rank | Provider | Patients | Appointments | Completion | No-Show | Sentiment |
+|------|----------|----------|--------------|------------|---------|-----------|
+| #1 | Aetna | 245 | 12,500 | 78.5% | 18.2% | Good |
+| #2 | BlueCross | 198 | 10,200 | 80.1% | 16.5% | Excellent |
+...
+```
+
+**Top Insurers:**
+```
+/top-insurers
+```
+Returns detailed breakdown of top 3 providers:
+```
+# Top 3 Insurance Providers
+
+## Aetna
+- **Rank:** #1
+- **Patients:** 245
+- **Appointments:** 12,500
+- **Completion Rate:** 78.5%
+- **No-Show Rate:** 18.2%
+- **Sentiment:** Good (7.2/10)
+- **Website:** https://aetna.com
+...
 ```
 
 ---
 
 ## Usage
+
+### Power BI Dashboard Components
+
+The Power BI report includes a comprehensive executive dashboard with 120+ measures organized for C-suite analytics.
+
+#### Recommended Dashboard Layout
+
+**Page 1: Executive Summary**
+- KPI Cards: Total Appointments, YoY Growth %, No-Show Rate, Patient Volume
+- Status indicators (green/yellow/red) for each KPI
+- Trend sparklines for 12-month performance
+- Executive summary text card
+
+**Page 2: Operations & Quality**
+- No-Show Rate trend line
+- Completion Rate by Insurance (bar chart)
+- Avg Wait Time gauge
+- Peak Hours heatmap
+
+**Page 4: Insurance Analytics**
+- Insurance Rankings table (from calculated table)
+- Top 3 Insurers cards
+- Sentiment Score distribution
+- Market Share (Top 3 vs Others) donut chart
+
+**Page 5: Demographics & Time**
+- Appointments by Age Group
+- Day-of-Week patterns
+- Morning vs Afternoon split
+- Patient Gender distribution
+
+#### Key Measure Folders
+
+| Folder | Measures | Purpose |
+|--------|----------|---------|
+| Insurance Analytics | 10 | Insurer rankings, sentiment, market share |
+| Quality Summary | 5 | Completion/no-show rates |
+| Status Icons | 3 | Visual health indicators |
+| Volume | 5 | Daily/peak appointments |
+| Executive KPIs | 20 | Pre-built exec measures |
+| Core Metrics | 7 | Base calculations |
+| Time Intelligence | 6 | YTD, prior year, rolling |
+| Scheduling Performance | 6 | Lead time, same-day booking |
+| Patient Experience | 5 | Wait time, arrival patterns |
 
 ### Power BI Connection
 
@@ -805,7 +938,7 @@ bi_project/
 │   └── package.json        # Node.js dependencies
 ├── n8n/
 │   └── workflows/
-│       └── ETL Medical Appointments.json
+│       └── ETL.json              # Consolidated ETL + Webhooks workflow
 ├── powerbi-mcp-server/     # Power BI MCP integration
 │   └── extension/
 │       └── server/
